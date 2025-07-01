@@ -39,6 +39,9 @@ generated/*.json
 generated/*.md
 generated/gen-mods/
 
+# Web interface session data
+sessions/
+
 # IDE files
 .vscode/
 .idea/

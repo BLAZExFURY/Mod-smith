@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ModSmith - AI-Powered Minecraft Modpack Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --accent: #06b6d4;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --background: #0f172a;
+            --surface: #1e293b;
+            --surface-light: #334155;
+            --text: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border: #334155;
+            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--background);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo i {
+            color: var(--primary);
+            -webkit-text-fill-color: var(--primary);
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 120px 0 80px;
+            text-align: center;
+            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1.2;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .hero-stats {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-top: 3rem;
+            flex-wrap: wrap;
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Generator Form */
+        .generator {
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+            border: 1px solid var(--border);
+            margin-bottom: 3rem;
+        }
+
+        .generator h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .form-group label {
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            color: var(--text-secondary);
+        }
+
+        .form-group select,
+        .form-group input {
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: var(--surface-light);
+            color: var(--text);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .form-group select:focus,
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--gradient);
+            color: white;
+            font-size: 1.1rem;
+            padding: 16px 32px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Processing States */
+        .processing-container {
+            display: none;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .processing-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .processing-header h3 {
+            font-size: 1.5rem;
+        }
+
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top: 2px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .progress-section {
+            margin-bottom: 2rem;
+        }
+
+        .progress-title {
+            font-weight: 500;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .progress-bar {
+            background: var(--surface-light);
+            border-radius: 8px;
+            height: 8px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-fill {
+            background: var(--gradient);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 8px;
+        }
+
+        .progress-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .step-list {
+            list-style: none;
+        }
+
+        .step-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .step-item:last-child {
+            border-bottom: none;
+        }
+
+        .step-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .step-icon.pending {
+            background: var(--surface-light);
+            color: var(--text-muted);
+        }
+
+        .step-icon.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .step-icon.complete {
+            background: var(--success);
+            color: white;
+        }
+
+        .step-icon.error {
+            background: var(--error);
+            color: white;
+        }
+
+        .step-text {
+            flex: 1;
+        }
+
+        .step-text.active {
+            color: var(--primary);
+            font-weight: 500;
+        }
+
+        .step-text.complete {
+            color: var(--success);
+        }
+
+        .step-text.error {
+            color: var(--error);
+        }
+
+        /* Results Section */
+        .results {
+            display: none;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .results-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 2rem;
+        }
+
+        .results-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--surface-light);
+            padding: 1.5rem;
+            border-radius: 12px;
+            text-align: center;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-card-number.success {
+            color: var(--success);
+        }
+
+        .stat-card-number.primary {
+            color: var(--primary);
+        }
+
+        .stat-card-number.warning {
+            color: var(--warning);
+        }
+
+        .stat-card-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .mod-list {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .mod-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(51, 65, 85, 0.5);
+        }
+
+        .mod-item:last-child {
+            border-bottom: none;
+        }
+
+        .mod-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--gradient);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .mod-info {
+            flex: 1;
+        }
+
+        .mod-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .mod-meta {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .mod-downloads {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        /* Download Section */
+        .download-section {
+            display: none;
+            background: var(--surface);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border);
+        }
+
+        .download-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .download-card {
+            background: var(--surface-light);
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .download-card:hover {
+            border-color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .download-card h4 {
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .download-card p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero-stats {
+                gap: 1rem;
+            }
+            
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .generator {
+                padding: 1.5rem;
+            }
+        }
+
+        /* Animations */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-cube"></i>
+                    ModSmith
+                </div>
+                <div style="color: var(--text-secondary); font-size: 0.9rem;">
+                    <i class="fas fa-robot"></i> AI-Powered Modpack Generator
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>Generate Perfect Modpacks with AI</h1>
+            <p>Create curated Minecraft modpacks tailored to your preferences using advanced AI and automatic mod downloading with Ferium integration.</p>
+            
+            <div class="hero-stats">
+                <div class="stat">
+                    <div class="stat-number">1000+</div>
+                    <div class="stat-label">Mods Supported</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">4</div>
+                    <div class="stat-label">Mod Loaders</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">12+</div>
+                    <div class="stat-label">MC Versions</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number">95%</div>
+                    <div class="stat-label">Success Rate</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container">
+        <!-- Generator Form -->
+        <section class="generator">
+            <h2>
+                <i class="fas fa-magic"></i>
+                Configure Your Modpack
+            </h2>
+            
+            <form id="modpackForm">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="mcVersion">
+                            <i class="fas fa-gamepad"></i>
+                            Minecraft Version
+                        </label>
+                        <select id="mcVersion" required>
+                            <option value="">Select Version</option>
+                            <option value="1.21.1">1.21.1 (Latest)</option>
+                            <option value="1.21">1.21</option>
+                            <option value="1.20.6">1.20.6</option>
+                            <option value="1.20.4">1.20.4</option>
+                            <option value="1.20.2">1.20.2</option>
+                            <option value="1.20.1" selected>1.20.1 (Popular)</option>
+                            <option value="1.20">1.20</option>
+                            <option value="1.19.4">1.19.4</option>
+                            <option value="1.19.2">1.19.2</option>
+                            <option value="1.19">1.19</option>
+                            <option value="1.18.2">1.18.2</option>
+                            <option value="1.18.1">1.18.1</option>
+                            <option value="1.18">1.18</option>
+                            <option value="1.17.1">1.17.1</option>
+                            <option value="1.16.5">1.16.5</option>
+                            <option value="1.16.4">1.16.4</option>
+                            <option value="1.12.2">1.12.2</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modLoader">
+                            <i class="fas fa-cogs"></i>
+                            Mod Loader
+                        </label>
+                        <select id="modLoader" required>
+                            <option value="">Select Loader</option>
+                            <option value="fabric">Fabric</option>
+                            <option value="forge" selected>Forge</option>
+                            <option value="quilt">Quilt</option>
+                            <option value="neoforge">NeoForge</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="theme">
+                            <i class="fas fa-palette"></i>
+                            Modpack Theme
+                        </label>
+                        <input type="text" id="theme" placeholder="e.g., tech, magic, adventure, optimized" required>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-rocket"></i>
+                    Generate Modpack
+                </button>
+            </form>
+        </section>
+
+        <!-- Processing Container -->
+        <section class="processing-container" id="processingContainer">
+            <div class="processing-header">
+                <div class="spinner"></div>
+                <h3>Generating Your Modpack...</h3>
+            </div>
+            
+            <div class="progress-section">
+                <div class="progress-title">
+                    <i class="fas fa-tasks"></i>
+                    Overall Progress
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="overallProgress"></div>
+                </div>
+                <div class="progress-text" id="overallProgressText">Starting...</div>
+            </div>
+            
+            <ul class="step-list" id="stepList">
+                <li class="step-item">
+                    <div class="step-icon pending" id="step1Icon">1</div>
+                    <div class="step-text" id="step1Text">Initializing AI system...</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-icon pending" id="step2Icon">2</div>
+                    <div class="step-text" id="step2Text">Generating mod suggestions...</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-icon pending" id="step3Icon">3</div>
+                    <div class="step-text" id="step3Text">Validating mods against Modrinth...</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-icon pending" id="step4Icon">4</div>
+                    <div class="step-text" id="step4Text">Creating output files...</div>
+                </li>
+                <li class="step-item">
+                    <div class="step-icon pending" id="step5Icon">5</div>
+                    <div class="step-text" id="step5Text">Preparing download options...</div>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Results Section -->
+        <section class="results" id="resultsSection">
+            <div class="results-header">
+                <i class="fas fa-check-circle" style="color: var(--success);"></i>
+                <h3>Modpack Generated Successfully!</h3>
+            </div>
+            
+            <div class="results-stats" id="resultsStats">
+                <!-- Stats will be populated by JavaScript -->
+            </div>
+            
+            <h4 style="margin-bottom: 1rem;">
+                <i class="fas fa-list"></i>
+                Generated Mods
+            </h4>
+            <div class="mod-list" id="modList">
+                <!-- Mod list will be populated by JavaScript -->
+            </div>
+        </section>
+
+        <!-- Download Section -->
+        <section class="download-section" id="downloadSection">
+            <h3 style="margin-bottom: 1.5rem;">
+                <i class="fas fa-download"></i>
+                Download Your Modpack
+            </h3>
+            
+            <div class="download-options">
+                <div class="download-card" onclick="downloadModFiles(event)">
+                    <h4>
+                        <i class="fas fa-archive" style="color: var(--success);"></i>
+                        Download Mod Files
+                    </h4>
+                    <p>Download all mod .jar files in a ZIP ready to install directly into your mods folder.</p>
+                </div>
+                
+                <div class="download-card" onclick="downloadWithFerium()">
+                    <h4>
+                        <i class="fas fa-magic" style="color: var(--primary);"></i>
+                        Automatic with Ferium
+                    </h4>
+                    <p>Download all mods automatically using Ferium integration. Requires Ferium to be installed.</p>
+                </div>
+                
+                <div class="download-card" onclick="downloadManual()">
+                    <h4>
+                        <i class="fas fa-file-download" style="color: var(--accent);"></i>
+                        Manual Download
+                    </h4>
+                    <p>Download the mod list file and install mods manually or use with your preferred mod manager.</p>
+                </div>
+                
+                <div class="download-card" onclick="downloadAll()">
+                    <h4>
+                        <i class="fas fa-archive" style="color: var(--secondary);"></i>
+                        All Files
+                    </h4>
+                    <p>Download all generated files including detailed JSON data and markdown summary.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Global variables
+        let currentModpack = null;
+        let processingSteps = [
+            { id: 'step1', text: 'Initializing AI system...', progress: 10 },
+            { id: 'step2', text: 'Generating mod suggestions...', progress: 30 },
+            { id: 'step3', text: 'Validating mods against Modrinth...', progress: 70 },
+            { id: 'step4', text: 'Creating output files...', progress: 90 },
+            { id: 'step5', text: 'Preparing download options...', progress: 100 }
+        ];
+
+        // Form submission handler
+        document.getElementById('modpackForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = {
+                mcVersion: document.getElementById('mcVersion').value,
+                modLoader: document.getElementById('modLoader').value,
+                theme: document.getElementById('theme').value
+            };
+            
+            await generateModpack(formData);
+        });
+
+        // Main modpack generation function
+        async function generateModpack(formData) {
+            // Hide results and show processing
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('downloadSection').style.display = 'none';
+            document.getElementById('processingContainer').style.display = 'block';
+            
+            // Reset all steps
+            resetProcessingSteps();
+            
+            // Disable form
+            const submitBtn = document.querySelector('.btn-primary');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<div class="spinner"></div> Generating...';
+            
+            let sessionId = null;
+            
+            try {
+                // Start generation on backend
+                const response = await fetch('/api/generate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Failed to start generation');
+                }
+                
+                const startData = await response.json();
+                sessionId = startData.session_id;
+                
+                // Poll for progress
+                await pollProgress(sessionId);
+                
+            } catch (error) {
+                console.error('Error generating modpack:', error);
+                showError('Failed to generate modpack. Please try again.');
+            } finally {
+                // Re-enable form
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="fas fa-rocket"></i> Generate Modpack';
+                
+                // Store session ID for downloads
+                if (sessionId) {
+                    window.currentSessionId = sessionId;
+                }
+            }
+        }
+
+        // Poll for generation progress
+        async function pollProgress(sessionId) {
+            const maxAttempts = 120; // 2 minutes max
+            let attempts = 0;
+            
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`/api/progress/${sessionId}`);
+                    const progress = await response.json();
+                    
+                    if (!response.ok) {
+                        throw new Error(progress.error || 'Failed to get progress');
+                    }
+                    
+                    // Update UI based on progress
+                    updateProgressFromBackend(progress);
+                    
+                    // Check if completed
+                    if (progress.status === 'completed') {
+                        displayResults(progress.result);
+                        document.getElementById('processingContainer').style.display = 'none';
+                        return;
+                    }
+                    
+                    // Check if error
+                    if (progress.status === 'error') {
+                        throw new Error(progress.error || 'Generation failed');
+                    }
+                    
+                    // Wait before next poll
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    attempts++;
+                    
+                } catch (error) {
+                    console.error('Progress polling error:', error);
+                    throw error;
+                }
+            }
+            
+            throw new Error('Generation timeout');
+        }
+
+        // Update progress from backend data
+        function updateProgressFromBackend(progress) {
+            // Update overall progress
+            updateProgress(progress.percentage, progress.current_step);
+            
+            // Update step indicators
+            for (let i = 1; i <= 5; i++) {
+                const stepIcon = document.getElementById(`step${i}Icon`);
+                const stepText = document.getElementById(`step${i}Text`);
+                
+                if (i < progress.step) {
+                    // Completed step
+                    stepIcon.className = 'step-icon complete';
+                    stepText.className = 'step-text complete';
+                    stepIcon.innerHTML = '<i class="fas fa-check"></i>';
+                } else if (i === progress.step && progress.status === 'processing') {
+                    // Current step
+                    stepIcon.className = 'step-icon active';
+                    stepText.className = 'step-text active';
+                    stepIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                } else {
+                    // Pending step
+                    stepIcon.className = 'step-icon pending';
+                    stepText.className = 'step-text';
+                    stepIcon.innerHTML = i.toString();
+                }
+            }
+        }
+
+        // Reset processing steps
+        function resetProcessingSteps() {
+            for (let i = 1; i <= 5; i++) {
+                const stepIcon = document.getElementById(`step${i}Icon`);
+                const stepText = document.getElementById(`step${i}Text`);
+                
+                stepIcon.className = 'step-icon pending';
+                stepText.className = 'step-text';
+                stepIcon.innerHTML = i.toString();
+            }
+            
+            updateProgress(0, 'Starting...');
+        }
+
+        // Simulate processing step
+        async function simulateStep(stepIndex) {
+            const step = processingSteps[stepIndex];
+            const stepIcon = document.getElementById(step.id + 'Icon');
+            const stepText = document.getElementById(step.id + 'Text');
+            
+            // Mark as active
+            stepIcon.className = 'step-icon active';
+            stepText.className = 'step-text active';
+            stepIcon.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
+            // Update progress
+            updateProgress(step.progress, step.text);
+            
+            // Simulate processing time
+            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+            
+            // Mark as complete
+            stepIcon.className = 'step-icon complete';
+            stepText.className = 'step-text complete';
+            stepIcon.innerHTML = '<i class="fas fa-check"></i>';
+        }
+
+        // Update progress bar
+        function updateProgress(percentage, text) {
+            document.getElementById('overallProgress').style.width = percentage + '%';
+            document.getElementById('overallProgressText').textContent = text;
+        }
+
+        // Generate mock modpack data
+        function generateMockModpackData(formData) {
+            const mockMods = [
+                { name: 'Create', slug: 'create', downloads: 15000000, categories: ['Technology', 'Decoration'] },
+                { name: 'Applied Energistics 2', slug: 'ae2', downloads: 12000000, categories: ['Technology', 'Storage'] },
+                { name: 'Iron Chests', slug: 'iron-chests', downloads: 8000000, categories: ['Storage', 'Utility'] },
+                { name: 'JEI', slug: 'jei', downloads: 25000000, categories: ['Utility', 'Recipe'] },
+                { name: 'Waystones', slug: 'waystones', downloads: 10000000, categories: ['Transportation', 'Utility'] },
+                { name: 'Storage Drawers', slug: 'storagedrawers', downloads: 9000000, categories: ['Storage'] },
+                { name: 'Biomes O\' Plenty', slug: 'biomes-o-plenty', downloads: 18000000, categories: ['World Generation', 'Biomes'] },
+                { name: 'OptiFine', slug: 'optifine', downloads: 30000000, categories: ['Performance', 'Optimization'] }
+            ];
+
+            return {
+                theme: formData.theme,
+                mcVersion: formData.mcVersion,
+                modLoader: formData.modLoader,
+                totalMods: mockMods.length,
+                successRate: 95,
+                mods: mockMods,
+                generatedAt: new Date().toISOString()
+            };
+        }
+
+        // Display results
+        function displayResults(data) {
+            currentModpack = data;
+            
+            // Update stats
+            const statsContainer = document.getElementById('resultsStats');
+            statsContainer.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-card-number success">${data.totalMods}</div>
+                    <div class="stat-card-label">Total Mods</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number primary">${data.successRate}%</div>
+                    <div class="stat-card-label">Success Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number primary">${data.mcVersion}</div>
+                    <div class="stat-card-label">MC Version</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number primary">${data.modLoader.toUpperCase()}</div>
+                    <div class="stat-card-label">Mod Loader</div>
+                </div>
+            `;
+            
+            // Update mod list
+            const modListContainer = document.getElementById('modList');
+            modListContainer.innerHTML = data.mods.map(mod => `
+                <div class="mod-item">
+                    <div class="mod-icon">${mod.name.charAt(0)}</div>
+                    <div class="mod-info">
+                        <div class="mod-name">${mod.name}</div>
+                        <div class="mod-meta">${mod.categories.join(', ')}</div>
+                    </div>
+                    <div class="mod-downloads">${formatNumber(mod.downloads)} downloads</div>
+                </div>
+            `).join('');
+            
+            // Show results and download sections
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('downloadSection').style.display = 'block';
+            
+            // Scroll to results
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Download functions
+        async function downloadModFiles(event) {
+            console.log('downloadModFiles called');
+            
+            if (!window.currentSessionId) {
+                showError('No active session found');
+                return;
+            }
+            
+            // Get the clicked element
+            let button;
+            if (event && event.currentTarget) {
+                button = event.currentTarget;
+            } else {
+                // Fallback: find the button by its content
+                const buttons = document.querySelectorAll('.download-card');
+                for (let btn of buttons) {
+                    if (btn.innerHTML.includes('Download Mod Files')) {
+                        button = btn;
+                        break;
+                    }
+                }
+            }
+            
+            if (!button) {
+                console.error('Could not find download button');
+                showError('Could not find download button');
+                return;
+            }
+            
+            try {
+                console.log('Starting mod files download...');
+                
+                // Show loading message
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<h4><i class="fas fa-spinner fa-spin"></i> Downloading Mod Files...</h4><p>Please wait while we download the mod files...</p>';
+                button.style.pointerEvents = 'none';
+                button.style.opacity = '0.7';
+                
+                console.log(`Fetching: /api/download/${window.currentSessionId}/mod-files`);
+                
+                const response = await fetch(`/api/download/${window.currentSessionId}/mod-files`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    console.error('Server error:', error);
+                    throw new Error(error.error || 'Failed to download mod files');
+                }
+                
+                console.log('Converting response to blob...');
+                const blob = await response.blob();
+                console.log('Blob size:', blob.size);
+                
+                if (blob.size === 0) {
+                    throw new Error('Downloaded file is empty');
+                }
+                
+                // Trigger download
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `modpack-${currentModpack.theme}-${currentModpack.mcVersion}.zip`;
+                document.body.appendChild(a); // Add to DOM for Firefox compatibility
+                a.click();
+                document.body.removeChild(a); // Clean up
+                URL.revokeObjectURL(url);
+                
+                console.log('Download triggered successfully');
+                
+                // Show success message
+                showSuccess('Mod files downloaded successfully! Extract the ZIP and copy the mods folder to your Minecraft instance.');
+                
+                // Restore button after success
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.pointerEvents = 'auto';
+                    button.style.opacity = '1';
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showError('Failed to download mod files: ' + error.message);
+                
+                // Restore button after error
+                setTimeout(() => {
+                    button.innerHTML = '<h4><i class="fas fa-archive" style="color: var(--success);"></i> Download Mod Files</h4><p>Download all mod .jar files in a ZIP ready to install directly into your mods folder.</p>';
+                    button.style.pointerEvents = 'auto';
+                    button.style.opacity = '1';
+                }, 1000);
+            }
+        }
+
+        async function downloadWithFerium() {
+            if (!window.currentSessionId) {
+                showError('No active session found');
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/ferium/${window.currentSessionId}`, {
+                    method: 'POST'
+                });
+                
+                const result = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(result.error || 'Failed to start Ferium download');
+                }
+                
+                // Show progress notification
+                alert('🚀 Ferium download started!\n\nMods are being downloaded in the background. This may take a few minutes depending on the number of mods.');
+                
+                // You could add real-time progress tracking here
+                
+            } catch (error) {
+                console.error('Ferium download error:', error);
+                showError(error.message);
+            }
+        }
+
+        async function downloadManual() {
+            if (!window.currentSessionId) {
+                showError('No active session found');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/download/${window.currentSessionId}/mods`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to download mod list');
+                }
+                
+                // Trigger download
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'gen-mods.txt';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showError('Failed to download mod list');
+            }
+        }
+
+        async function downloadAll() {
+            if (!window.currentSessionId) {
+                showError('No active session found');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/download/${window.currentSessionId}/all`);
+                
+                if (!response.ok) {
+                    throw new Error('Failed to download files');
+                }
+                
+                // Trigger download
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'modpack-complete.zip';
+                a.click();
+                URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Download error:', error);
+                showError('Failed to download files');
+            }
+        }
+
+        // Utility functions
+        function formatNumber(num) {
+            if (num >= 1000000) {
+                return (num / 1000000).toFixed(1) + 'M';
+            } else if (num >= 1000) {
+                return (num / 1000).toFixed(1) + 'K';
+            }
+            return num.toString();
+        }
+
+        function showError(message) {
+            // Create a more elegant notification instead of alert
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--error);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            notification.innerHTML = `<i class="fas fa-exclamation-triangle"></i> ${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 5000);
+        }
+
+        function showSuccess(message) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: var(--success);
+                color: white;
+                padding: 15px 20px;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                z-index: 10000;
+                max-width: 400px;
+                word-wrap: break-word;
+            `;
+            notification.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 7000);
+        }
+
+        // Initialize theme suggestions
+        const themeInput = document.getElementById('theme');
+        const themes = ['tech', 'magic', 'adventure', 'optimized', 'kitchen sink', 'exploration', 'building', 'automation'];
+        
+        themeInput.addEventListener('input', function() {
+            // Simple autocomplete could be added here
+        });
+
+        // Add some nice animations on load
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.hero').classList.add('fade-in');
+            setTimeout(() => {
+                document.querySelector('.generator').classList.add('fade-in');
+            }, 200);
+        });
+    </script>
+</body>
+</html>

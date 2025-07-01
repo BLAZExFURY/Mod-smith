@@ -1,14 +1,16 @@
 # 🤖 ModSmith - AI-Powered Minecraft Modpack Generator
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Web%20Interface-Flask-red.svg)](https://flask.palletsprojects.com/)
 [![Gemini](https://img.shields.io/badge/Powered%20by-Gemini%202.0%20Flash-orange.svg)](https://ai.google.dev/)
 [![Modrinth](https://img.shields.io/badge/Validated%20on-Modrinth-green.svg)](https://modrinth.com)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Google's Gemini 2.0 Flash to intelligently select and validate mods from Modrinth based on your preferences.
+Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Google's Gemini 2.0 Flash to intelligently select and validate mods from Modrinth based on your preferences. Now with a **professional web interface** for easy use!
 
 ## ✨ Features
 
+- 🌐 **Professional Web Interface**: Modern, responsive UI with real-time progress tracking
 - 🧠 **AI-Driven Curation**: Uses Gemini 2.0 Flash for intelligent mod selection
 - 🎯 **Theme-Based Generation**: Tech, magic, adventure, or custom themes
 - 🔧 **Version & Loader Aware**: Supports all major Minecraft versions and mod loaders
@@ -16,30 +18,86 @@ Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Googl
 - 📚 **Learning System**: Improves suggestions over time by learning from failures
 - ⚡ **Ferium Integration**: Automatic mod downloads with one-click setup
 - 📦 **Ready-to-Use Output**: Generates mod lists and downloads .jar files
+- 🔄 **Real-Time Progress**: Live updates during generation with animated progress bars
+- 📥 **Multiple Download Options**: Download mod lists, summaries, and actual .jar files
+- 🎨 **Beautiful UI**: Dark theme with gradients, animations, and professional design
 - 📊 **Comprehensive Diagnostics**: Clear insights into AI performance and failure attribution
 
 ## 🚀 Quick Start
 
-### 1. Clone & Install
+### Option 1: Web Interface (Recommended)
+
+1. **Clone & Setup**:
 ```bash
 git clone https://github.com/BLAZExFURY/Mod-smith.git
 cd Mod-smith
-pip install -r requirements.txt
+chmod +x start_web.sh
 ```
 
-### 2. Setup API Key
+2. **Configure API Key**:
 ```bash
 cp .env.example .env
 # Edit .env and add your Gemini API key:
 # GEMINI_API_KEY=your_api_key_here
 ```
 
-Get your free Gemini API key: [Google AI Studio](https://makersuite.google.com/app/apikey)
+3. **Launch Web Interface**:
+```bash
+./start_web.sh
+```
 
-### 3. Generate Your Modpack
+The web interface will be available at `http://localhost:5000`
+
+**Web Interface Features:**
+- 🎨 Beautiful, responsive design with dark theme
+- ⚡ Real-time progress tracking with animated steps
+- 📊 Live progress bars and status updates
+- 📥 Multiple download options (mod lists, summaries, .jar files)
+- 🔄 Session-based generation with progress persistence
+- 📱 Mobile-friendly responsive design
+
+### Option 2: Command Line Interface
+
+1. **Install Dependencies**:
+```bash
+pip install -r requirements.txt
+```
+
+2. **Setup API Key** (same as above)
+
+3. **Generate Your Modpack**:
 ```bash
 python mod_generator.py
 ```
+
+Get your free Gemini API key: [Google AI Studio](https://makersuite.google.com/app/apikey)
+
+## 🌐 Web Interface
+
+The web interface provides a modern, user-friendly way to generate modpacks:
+
+### Features:
+- **🎨 Modern Design**: Professional dark theme with gradients and animations
+- **📱 Responsive**: Works perfectly on desktop, tablet, and mobile devices
+- **⚡ Real-Time Updates**: Live progress tracking with animated progress bars
+- **🔄 Session Management**: Your progress is saved and can be resumed
+- **📥 Multiple Downloads**: Get mod lists, summaries, or actual .jar files
+- **🎯 Smart Forms**: Dropdown menus with popular options and validation
+- **🔍 Progress Visualization**: Animated steps showing current generation phase
+
+### Web Interface Screenshots:
+- Beautiful hero section with gradient background
+- Interactive configuration form with smart defaults
+- Real-time progress tracking with animated steps
+- Results dashboard with multiple download options
+- Professional download cards for different file types
+
+### API Endpoints:
+The web interface uses a REST API with the following endpoints:
+- `POST /api/generate` - Start modpack generation
+- `GET /api/progress/<session_id>` - Get real-time progress
+- `GET /api/download/<file_type>/<session_id>` - Download files
+- `GET /api/download-mods/<session_id>` - Download mod .jar files as ZIP
 
 ## 🎮 Usage Example
 
@@ -91,6 +149,21 @@ All generated files are saved in the `generated/` folder:
 | `modpack-details.json` | Complete mod information and metadata |
 | `modpack-summary.md` | Human-readable summary with installation guide |
 | `learning_data.json` | AI learning data for improved future suggestions |
+
+## 🌐 Web Interface Files
+
+| File/Folder | Description |
+|-------------|-------------|
+| `web/index.html` | Main web interface with modern UI |
+| `web_server.py` | Flask backend API server |
+| `start_web.sh` | Quick start script for web interface |
+| `sessions/` | Session data for web interface progress tracking |
+
+### Download Options (Web Interface):
+- **📄 Mod List**: Download `gen-mods.txt` for manual installation
+- **📋 Summary**: Download `modpack-summary.md` with detailed information
+- **📦 Mod Files**: Download actual .jar files as a ZIP archive
+- **📊 Details**: Download `modpack-details.json` with complete metadata
 
 ## ⚡ Automatic Mod Downloads
 
@@ -181,7 +254,14 @@ google-generativeai>=0.3.0
 requests>=2.28.0
 colorama>=0.4.6
 python-dotenv>=0.19.0
+flask>=2.0.0
+flask-cors>=3.0.0
 ```
+
+### For Web Interface:
+- **Flask**: Web framework for the REST API
+- **Flask-CORS**: Cross-origin resource sharing support
+- **Werkzeug**: WSGI utilities for file handling
 
 ## 🎨 Themes & Examples
 
@@ -213,6 +293,27 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🐛 Issues & Support
 
 Found a bug or have a feature request? Please [open an issue](https://github.com/BLAZExFURY/Mod-smith/issues) on GitHub.
+
+### 🔧 Troubleshooting
+
+**Web Interface Issues:**
+- If the web server won't start, ensure port 5000 is available
+- Check that all dependencies are installed: `pip install -r requirements.txt`
+- Verify your Gemini API key is set in the `.env` file
+- For permission issues, run: `chmod +x start_web.sh`
+
+**Common Solutions:**
+- **Import Errors**: Activate virtual environment or reinstall dependencies
+- **API Errors**: Check your Gemini API key and internet connection
+- **Ferium Issues**: Ensure Ferium is installed and accessible in PATH
+- **Download Issues**: Check file permissions in the `generated/` folder
+
+### 📚 Documentation
+
+For detailed documentation, see:
+- [PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md) - Project organization and architecture
+- [DEVELOPMENT.md](DEVELOPMENT.md) - Development setup and contribution guide
+- [WEB_INTERFACE.md](WEB_INTERFACE.md) - Web interface technical details
 
 ---
 
