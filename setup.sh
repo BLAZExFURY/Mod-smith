@@ -42,7 +42,11 @@ fi
 
 echo "✅ Setup complete!"
 echo ""
-echo "Next steps:"
-echo "1. Edit .env and add your Gemini API key"
-echo "2. Run: source mc/bin/activate"
-echo "3. Run: python mod_generator.py"
+echo "🚀 Virtual environment is now activated!"
+echo "You can now run: python mod_generator.py"
+echo ""
+echo "💡 To reactivate later, run: source mc/bin/activate"
+
+# Keep the environment activated by starting a new shell
+echo "🔄 Starting new shell with activated environment..."
+exec bash
