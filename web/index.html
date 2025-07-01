@@ -8,21 +8,21 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --secondary: #8b5cf6;
-            --accent: #06b6d4;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --background: #0f172a;
-            --surface: #1e293b;
-            --surface-light: #334155;
-            --text: #f8fafc;
-            --text-secondary: #cbd5e1;
-            --text-muted: #64748b;
-            --border: #334155;
-            --gradient: linear-gradient(135deg, var(--primary), var(--secondary));
+            --primary: #000000;
+            --primary-dark: #333333;
+            --secondary: #666666;
+            --accent: #888888;
+            --success: #000000;
+            --warning: #555555;
+            --error: #000000;
+            --background: #ffffff;
+            --surface: #f8f8f8;
+            --surface-light: #e8e8e8;
+            --text: #000000;
+            --text-secondary: #333333;
+            --text-muted: #666666;
+            --border: #cccccc;
+            --gradient: linear-gradient(135deg, #000000, #333333);
         }
 
         * {
@@ -47,7 +47,7 @@
 
         /* Header */
         .header {
-            background: rgba(15, 23, 42, 0.9);
+            background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--border);
             padding: 1rem 0;
@@ -56,6 +56,7 @@
             left: 0;
             right: 0;
             z-index: 1000;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header-content {
@@ -85,7 +86,7 @@
         .hero {
             padding: 120px 0 80px;
             text-align: center;
-            background: radial-gradient(ellipse at center, rgba(99, 102, 241, 0.1) 0%, transparent 70%);
+            background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.05) 0%, transparent 70%);
         }
 
         .hero h1 {
@@ -206,7 +207,7 @@
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
         }
 
         .btn-primary:disabled {
@@ -451,6 +452,55 @@
             color: var(--text-muted);
             font-size: 0.8rem;
             font-weight: 500;
+        }
+
+        /* Failed Mods Section */
+        .failed-mod-list {
+            background: var(--surface-light);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--warning);
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .failed-mod-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .failed-mod-item:last-child {
+            border-bottom: none;
+        }
+
+        .failed-mod-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--warning);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .failed-mod-info {
+            flex: 1;
+        }
+
+        .failed-mod-name {
+            font-weight: 500;
+            margin-bottom: 4px;
+            color: var(--warning);
+        }
+
+        .failed-mod-reason {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
         }
 
         /* Download Section */
@@ -705,6 +755,24 @@
             </h4>
             <div class="mod-list" id="modList">
                 <!-- Mod list will be populated by JavaScript -->
+            </div>
+            
+            <!-- Failed Mods Section -->
+            <div id="failedModsSection" style="display: none; margin-top: 2rem;">
+                <h4 style="margin-bottom: 1rem; color: var(--warning);">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Mods Not Found in Modrinth
+                </h4>
+                <div class="failed-mod-list" id="failedModList">
+                    <!-- Failed mod list will be populated by JavaScript -->
+                </div>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">
+                    <i class="fas fa-info-circle"></i>
+                    These mods were suggested by AI but were not found in the Modrinth database. They may be:
+                    <br>• Available on other platforms (CurseForge, GitHub)
+                    <br>• Discontinued or renamed
+                    <br>• AI hallucinations (non-existent)
+                </p>
             </div>
         </section>
 
@@ -971,10 +1039,17 @@
             
             // Update stats
             const statsContainer = document.getElementById('resultsStats');
+            const failedCount = data.failedMods ? data.failedMods.length : 0;
+            const totalSuggestions = data.totalMods + failedCount;
+            
             statsContainer.innerHTML = `
                 <div class="stat-card">
                     <div class="stat-card-number success">${data.totalMods}</div>
-                    <div class="stat-card-label">Total Mods</div>
+                    <div class="stat-card-label">Found Mods</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-card-number warning">${failedCount}</div>
+                    <div class="stat-card-label">Not Found</div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-card-number primary">${data.successRate}%</div>
@@ -1002,6 +1077,28 @@
                     <div class="mod-downloads">${formatNumber(mod.downloads)} downloads</div>
                 </div>
             `).join('');
+            
+            // Update failed mods section
+            if (data.failedMods && data.failedMods.length > 0) {
+                const failedModsSection = document.getElementById('failedModsSection');
+                const failedModListContainer = document.getElementById('failedModList');
+                
+                failedModListContainer.innerHTML = data.failedMods.map(failedMod => `
+                    <div class="failed-mod-item">
+                        <div class="failed-mod-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="failed-mod-info">
+                            <div class="failed-mod-name">${failedMod.name || failedMod}</div>
+                            <div class="failed-mod-reason">Not found in Modrinth database</div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                failedModsSection.style.display = 'block';
+            } else {
+                document.getElementById('failedModsSection').style.display = 'none';
+            }
             
             // Show results and download sections
             document.getElementById('resultsSection').style.display = 'block';

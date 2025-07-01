@@ -70,10 +70,25 @@ class WebModGenerator(MinecraftModGenerator):
                 raise Exception("No mod suggestions generated")
             
             self.update_progress(3, 'Validating mods against Modrinth...', 70)
+            
+            # Store original mod count to track failures
+            original_suggestions = mod_suggestions.copy()
+            
             valid_mods = self.validate_mods(mod_suggestions, mc_version, mod_loader, theme)
             
             if not valid_mods:
                 raise Exception("No valid mods found")
+            
+            # Calculate failed mods
+            valid_mod_names = {mod.name.lower() for mod in valid_mods}
+            failed_mods = []
+            
+            for suggestion in original_suggestions:
+                suggestion_lower = suggestion.lower()
+                # Check if this suggestion wasn't found in valid mods
+                if not any(suggestion_lower in valid_name or valid_name in suggestion_lower 
+                          for valid_name in valid_mod_names):
+                    failed_mods.append(suggestion)
             
             self.update_progress(4, 'Creating output files...', 90)
             self.generate_output_files(valid_mods, mc_version, mod_loader, theme)
@@ -87,7 +102,7 @@ class WebModGenerator(MinecraftModGenerator):
                 'mcVersion': mc_version,
                 'modLoader': mod_loader,
                 'totalMods': len(valid_mods),
-                'successRate': round((len(valid_mods) / len(mod_suggestions)) * 100) if mod_suggestions else 0,
+                'successRate': round((len(valid_mods) / len(original_suggestions)) * 100) if original_suggestions else 0,
                 'mods': [
                     {
                         'name': mod.name,
@@ -97,6 +112,7 @@ class WebModGenerator(MinecraftModGenerator):
                         'categories': mod.categories
                     } for mod in valid_mods
                 ],
+                'failedMods': failed_mods,  # Include failed mods in response
                 'generatedAt': time.strftime('%Y-%m-%d %H:%M:%S')
             }
             
