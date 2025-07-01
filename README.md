@@ -21,7 +21,7 @@ Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Googl
 
 ### 1. Clone & Install
 ```bash
-git clone https://github.com/your-username/modsmith.git
+git clone https://github.com/BLAZExFURY/modsmith.git
 cd modsmith
 pip install -r requirements.txt
 ```
