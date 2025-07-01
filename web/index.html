@@ -790,6 +790,9 @@
                         Download Mods with Ferium
                     </h4>
                     <p>Download all mod .jar files directly to the server's generated/gen-mods/ folder using Ferium. Includes all dependencies automatically!</p>
+                    <div id="downloadPath" style="display: none; margin-top: 10px; padding: 8px; background: var(--accent-bg); border-radius: 4px; font-family: monospace; font-size: 0.9em; word-break: break-all;">
+                        <strong>📁 Download Location:</strong> <span id="modsDirectoryPath"></span>
+                    </div>
                 </div>
                 </div>
                 
@@ -1097,6 +1100,9 @@
             document.getElementById('resultsSection').style.display = 'block';
             document.getElementById('downloadSection').style.display = 'block';
             
+            // Fetch and display the download directory path
+            fetchDownloadPath();
+            
             // Scroll to results
             document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
         }
@@ -1131,8 +1137,10 @@
                     throw new Error(result.error || 'Failed to start Ferium download');
                 }
                 
-                // Show success message
-                showSuccess('🚀 Ferium download started!\n\nMods are being downloaded to the server\'s generated/gen-mods/ folder. Check the server console for progress updates.');
+                // Show success message with directory path
+                const pathElement = document.getElementById('modsDirectoryPath');
+                const dirPath = pathElement ? pathElement.textContent : 'generated/gen-mods/';
+                showSuccess(`🚀 Ferium download started!\n\nMods are being downloaded to:\n📁 ${dirPath}\n\nCheck the server console for progress updates.`);
                 
                 // Start polling for completion status
                 pollFeriumStatus();
@@ -1167,7 +1175,10 @@
                     if (data.ferium_status === 'completed') {
                         clearInterval(pollInterval);
                         if (data.ferium_success) {
-                            showSuccess('✅ Ferium download completed successfully! Mods are now available in the generated/gen-mods/ folder on the server.');
+                            // Get the actual directory path for the success message
+                            const pathElement = document.getElementById('modsDirectoryPath');
+                            const dirPath = pathElement ? pathElement.textContent : 'generated/gen-mods/';
+                            showSuccess(`✅ Ferium download completed successfully! Mods are now available at:\n📁 ${dirPath}`);
                         } else {
                             showError('❌ Ferium download completed but some mods may have failed to download. Check the server console for details.');
                         }
@@ -1314,6 +1325,26 @@
                 document.querySelector('.generator').classList.add('fade-in');
             }, 200);
         });
+
+        async function fetchDownloadPath() {
+            try {
+                const response = await fetch('/api/download-path');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const pathElement = document.getElementById('modsDirectoryPath');
+                    const downloadPathDiv = document.getElementById('downloadPath');
+                    
+                    if (pathElement && downloadPathDiv) {
+                        pathElement.textContent = data.path;
+                        downloadPathDiv.style.display = 'block';
+                    }
+                }
+            } catch (error) {
+                console.error('Error fetching download path:', error);
+                // Don't show error to user, it's not critical
+            }
+        }
     </script>
 </body>
 </html>

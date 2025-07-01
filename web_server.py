@@ -588,6 +588,19 @@ def cleanup_session(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/download-path')
+def get_download_path():
+    """Get the absolute path where mods are downloaded"""
+    try:
+        mods_dir = Path("generated/gen-mods").resolve()
+        return jsonify({
+            'success': True,
+            'path': str(mods_dir),
+            'exists': mods_dir.exists()
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 @app.errorhandler(404)
 def not_found(error):
     return send_file('web/index.html')
