@@ -31,17 +31,22 @@ Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Googl
 ```bash
 git clone https://github.com/BLAZExFURY/Mod-smith.git
 cd Mod-smith
-chmod +x start_web.sh
 ```
 
-2. **Configure API Key**:
+2. **Install System Dependencies** (Ubuntu/Debian):
+```bash
+chmod +x setup.sh
+./setup.sh
+```
+
+3. **Configure API Key**:
 ```bash
 cp .env.example .env
 # Edit .env and add your Gemini API key:
 # GEMINI_API_KEY=your_api_key_here
 ```
 
-3. **Launch Web Interface**:
+4. **Launch Web Interface**:
 ```bash
 ./start_web.sh
 ```
@@ -298,9 +303,10 @@ Found a bug or have a feature request? Please [open an issue](https://github.com
 
 **Web Interface Issues:**
 - If the web server won't start, ensure port 5000 is available
+- For system dependencies on Ubuntu/Debian, run: `./setup.sh`
 - Check that all dependencies are installed: `pip install -r requirements.txt`
 - Verify your Gemini API key is set in the `.env` file
-- For permission issues, run: `chmod +x start_web.sh`
+- For permission issues, run: `chmod +x start_web.sh setup.sh`
 
 **Common Solutions:**
 - **Import Errors**: Activate virtual environment or reinstall dependencies

@@ -6,19 +6,49 @@
 echo "🚀 ModSmith Web Interface Launcher"
 echo "=================================="
 
+# Check if Python 3 is available
+if ! command -v python3 &> /dev/null; then
+    echo "❌ Error: Python 3 is not installed!"
+    echo "Please install Python 3.8+ to continue."
+    exit 1
+fi
+
 # Check if virtual environment exists
-if [ ! -d "mc" ]; then
+if [ ! -d "venv" ]; then
     echo "📦 Creating virtual environment..."
-    python3 -m venv mc
+    python3 -m venv venv
+    if [ $? -ne 0 ]; then
+        echo "❌ Error: Failed to create virtual environment!"
+        echo "Make sure you have python3-venv installed:"
+        echo "   sudo apt install python3-venv python3-full"
+        exit 1
+    fi
+else
+    echo "✅ Virtual environment already exists"
 fi
 
 # Activate virtual environment
 echo "🔧 Activating virtual environment..."
-source mc/bin/activate
+source venv/bin/activate
+
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to activate virtual environment!"
+    exit 1
+fi
+
+# Upgrade pip to latest version
+echo "📦 Upgrading pip..."
+pip install --upgrade pip
 
 # Install/update requirements
 echo "📚 Installing dependencies..."
 pip install -r requirements.txt
+
+if [ $? -ne 0 ]; then
+    echo "❌ Error: Failed to install dependencies!"
+    echo "Please check your requirements.txt file."
+    exit 1
+fi
 
 # Check for .env file
 if [ ! -f ".env" ]; then
@@ -29,7 +59,10 @@ if [ ! -f ".env" ]; then
     echo "🔑 Please edit .env and add your GEMINI_API_KEY:"
     echo "   nano .env"
     echo ""
+    echo "Get your API key from: https://makersuite.google.com/app/apikey"
+    echo ""
     echo "Then run this script again."
+    deactivate
     exit 1
 fi
 
@@ -44,6 +77,7 @@ fi
 if [ ! -d "web" ]; then
     echo "❌ Error: web folder not found!"
     echo "Make sure you're running this from the ModSmith directory."
+    deactivate
     exit 1
 fi
 

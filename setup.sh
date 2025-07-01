@@ -1,43 +1,28 @@
 #!/bin/bash
-# ModSmith Setup Script
 
-echo "🔨 ModSmith Setup Script"
+# ModSmith Setup Script
+# Installs system dependencies and prepares the environment
+
+echo "� ModSmith System Setup"
 echo "========================"
 
-# Check if Python 3.11 is available
-if ! command -v python3.11 &> /dev/null; then
-    echo "❌ Python 3.11 not found. Please install Python 3.11 first."
-    exit 1
+# Check if we're on Ubuntu/Debian
+if command -v apt &> /dev/null; then
+    echo "📦 Installing system dependencies..."
+    sudo apt update
+    sudo apt install -y python3 python3-venv python3-pip python3-full
+    echo "✅ System dependencies installed!"
+else
+    echo "ℹ️  This script is designed for Ubuntu/Debian systems."
+    echo "Please install Python 3.8+, python3-venv, and python3-pip manually."
 fi
 
-echo "✅ Python 3.11 found"
-
-# Create virtual environment if it doesn't exist
-if [ ! -d "mc" ]; then
-    echo "📦 Creating virtual environment..."
-    python3.11 -m venv mc
-else
-    echo "📦 Virtual environment already exists"
-fi
-
-# Activate virtual environment
-echo "🔄 Activating virtual environment..."
-source mc/bin/activate
-
-# Install dependencies
-echo "📥 Installing dependencies..."
-pip install -r requirements.txt
-
-# Check if .env exists
-if [ ! -f ".env" ]; then
-    echo "⚙️  Creating .env file from template..."
-    cp .env.example .env
-    echo ""
-    echo "🔑 IMPORTANT: Please edit .env and add your Gemini API key!"
-    echo "   Get your API key from: https://makersuite.google.com/app/apikey"
-    echo ""
-else
-    echo "⚙️  .env file already exists"
+echo ""
+echo "🚀 Ready to run ModSmith!"
+echo "Next steps:"
+echo "1. Copy .env.example to .env and add your Gemini API key"
+echo "2. Run: ./start_web.sh"
+echo ""
 fi
 
 echo "✅ Setup complete!"

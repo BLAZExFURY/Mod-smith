@@ -31,7 +31,6 @@ env/
 ENV/
 env.bak/
 venv.bak/
-mc/
 
 # Generated modpack files (keep folder structure but ignore contents)
 generated/*.txt
