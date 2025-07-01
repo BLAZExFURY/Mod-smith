@@ -135,6 +135,8 @@ class WebModGenerator(MinecraftModGenerator):
         
         # Create temporary directory for downloads
         temp_dir = Path(tempfile.mkdtemp(prefix='modsmith_ferium_'))
+        mods_dir = temp_dir / 'mods'
+        mods_dir.mkdir(parents=True, exist_ok=True)
         
         try:
             print(f"📥 Downloading {len(valid_mods)} mods using Ferium...")
@@ -143,30 +145,37 @@ class WebModGenerator(MinecraftModGenerator):
             # Create unique profile name
             profile_name = f"modsmith-temp-{int(time.time())}"
             
-            # Create Ferium profile
+            # Create Ferium profile with explicit output directory
             print(f"🔧 Creating Ferium profile: {profile_name}")
             create_cmd = [
                 'ferium', 'profile', 'create',
                 '--game-version', mc_version,
                 '--mod-loader', mod_loader,
-                '--output-dir', str(temp_dir),
+                '--output-dir', str(mods_dir),  # Set explicit mods directory
                 '--name', profile_name
             ]
             
+            print(f"Running: {' '.join(create_cmd)}")
             result = subprocess.run(create_cmd, capture_output=True, text=True, timeout=30)
             if result.returncode != 0:
+                print(f"Create command stdout: {result.stdout}")
+                print(f"Create command stderr: {result.stderr}")
                 raise Exception(f"Failed to create Ferium profile: {result.stderr}")
             
             print(f"✅ Ferium profile created successfully")
+            print(f"Profile output: {result.stdout}")
             
             # Switch to the new profile
+            print(f"🔄 Switching to profile: {profile_name}")
             switch_cmd = ['ferium', 'profile', 'switch', profile_name]
             result = subprocess.run(switch_cmd, capture_output=True, text=True, timeout=10)
             if result.returncode != 0:
+                print(f"Switch command stderr: {result.stderr}")
                 raise Exception(f"Failed to switch to Ferium profile: {result.stderr}")
             
             # Add all mods to the profile
             print(f"📦 Adding {len(valid_mods)} mods to Ferium profile...")
+            successful_adds = 0
             for i, mod in enumerate(valid_mods, 1):
                 try:
                     print(f"[{i:2d}/{len(valid_mods):2d}] Adding: {mod.name}")
@@ -176,6 +185,7 @@ class WebModGenerator(MinecraftModGenerator):
                     
                     if result.returncode == 0:
                         print(f"    ✓ Added: {mod.name}")
+                        successful_adds += 1
                     else:
                         print(f"    ⚠️  Failed to add {mod.name}: {result.stderr.strip()}")
                         
@@ -183,37 +193,81 @@ class WebModGenerator(MinecraftModGenerator):
                     print(f"    ❌ Error adding {mod.name}: {e}")
                     continue
             
-            # Download all mods (including dependencies)
+            if successful_adds == 0:
+                raise Exception("No mods were successfully added to Ferium profile")
+            
+            print(f"✅ Successfully added {successful_adds} mods to profile")
+            
+            # List profile to verify mods were added
+            print(f"🔍 Verifying profile contents...")
+            list_cmd = ['ferium', 'list']
+            result = subprocess.run(list_cmd, capture_output=True, text=True, timeout=10)
+            print(f"Profile contents:\n{result.stdout}")
+            
+            # Download all mods (including dependencies) with verbose output
             print(f"🚀 Downloading mods with Ferium (this includes dependencies automatically)...")
-            download_cmd = ['ferium', 'upgrade']
+            download_cmd = ['ferium', 'upgrade', '--verbose']
+            print(f"Running: {' '.join(download_cmd)}")
+            
             result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=300)  # 5 minute timeout
             
+            print(f"Ferium upgrade output:\n{result.stdout}")
+            if result.stderr:
+                print(f"Ferium upgrade stderr:\n{result.stderr}")
+            
             if result.returncode != 0:
-                print(f"⚠️  Ferium upgrade had issues: {result.stderr}")
+                print(f"⚠️  Ferium upgrade had issues (return code: {result.returncode})")
                 # Don't fail completely, some mods might still have downloaded
             
             # Check what was downloaded
             downloaded_files = []
-            mods_dir = temp_dir / 'mods'
             
+            print(f"🔍 Checking for downloaded files in: {mods_dir}")
             if mods_dir.exists():
-                for jar_file in mods_dir.glob('*.jar'):
+                jar_files = list(mods_dir.glob('*.jar'))
+                print(f"Found {len(jar_files)} .jar files")
+                
+                for jar_file in jar_files:
+                    file_size = jar_file.stat().st_size
                     downloaded_files.append({
                         'filename': jar_file.name,
                         'path': jar_file,
-                        'size': jar_file.stat().st_size
+                        'size': file_size
                     })
-                    print(f"    ✓ Downloaded: {jar_file.name} ({jar_file.stat().st_size // 1024} KB)")
+                    print(f"    ✓ Downloaded: {jar_file.name} ({file_size // 1024} KB)")
+            else:
+                print(f"❌ Mods directory does not exist: {mods_dir}")
             
-            print(f"✅ Ferium download complete: {len(downloaded_files)} files downloaded")
+            # Also check the temp directory root for any files
+            for jar_file in temp_dir.rglob('*.jar'):
+                if jar_file not in [f['path'] for f in downloaded_files]:
+                    file_size = jar_file.stat().st_size
+                    downloaded_files.append({
+                        'filename': jar_file.name,
+                        'path': jar_file,
+                        'size': file_size
+                    })
+                    print(f"    ✓ Found additional file: {jar_file.name} ({file_size // 1024} KB)")
+            
+            print(f"✅ Ferium download complete: {len(downloaded_files)} files found")
             
             # Clean up Ferium profile
             try:
+                print(f"🧹 Cleaning up Ferium profile: {profile_name}")
                 delete_cmd = ['ferium', 'profile', 'delete', profile_name, '--force']
                 subprocess.run(delete_cmd, capture_output=True, text=True, timeout=10)
-                print(f"🧹 Cleaned up Ferium profile: {profile_name}")
-            except:
-                print(f"⚠️  Could not clean up Ferium profile: {profile_name}")
+                print(f"✅ Cleaned up Ferium profile: {profile_name}")
+            except Exception as cleanup_error:
+                print(f"⚠️  Could not clean up Ferium profile: {cleanup_error}")
+            
+            if not downloaded_files:
+                # Try to get more info about why nothing downloaded
+                print("🔍 Debug: Checking Ferium configuration...")
+                config_cmd = ['ferium', 'profile', 'list']
+                result = subprocess.run(config_cmd, capture_output=True, text=True, timeout=10)
+                print(f"Ferium profiles: {result.stdout}")
+                
+                raise Exception("No mod files were downloaded by Ferium. This could be due to version compatibility issues or network problems.")
             
             return downloaded_files, temp_dir
             
@@ -222,6 +276,7 @@ class WebModGenerator(MinecraftModGenerator):
         except FileNotFoundError:
             raise Exception("Ferium not found. Please install Ferium: https://github.com/gorilla-devs/ferium")
         except Exception as e:
+            print(f"❌ Error in Ferium download: {e}")
             # Clean up on error
             if temp_dir.exists():
                 shutil.rmtree(temp_dir)
@@ -438,14 +493,40 @@ def download_file(session_id, file_type):
                 )
                 
                 if not downloaded_files:
-                    print("❌ Ferium failed to download any mod files")
-                    return jsonify({'error': 'Ferium failed to download any mod files. Make sure Ferium is installed and working.'}), 500
-                
-                print(f"✅ Ferium downloaded {len(downloaded_files)} files (including dependencies)")
+                    print("❌ Ferium failed to download any mod files, trying direct download as fallback...")
+                    # Fallback to direct download with warning
+                    downloaded_files, temp_dir = generator.download_mod_files(
+                        temp_mods, 
+                        result['mcVersion'], 
+                        result['modLoader']
+                    )
+                    
+                    if not downloaded_files:
+                        return jsonify({'error': 'Both Ferium and direct download failed. Please check your internet connection and try again.'}), 500
+                    
+                    print(f"⚠️  Using direct download fallback: {len(downloaded_files)} files downloaded")
+                    download_method = "direct"
+                else:
+                    print(f"✅ Ferium downloaded {len(downloaded_files)} files (including dependencies)")
+                    download_method = "ferium"
                 
             except Exception as e:
                 print(f"❌ Ferium download error: {e}")
-                return jsonify({'error': f'Ferium download failed: {str(e)}'}), 500
+                print("🔄 Trying direct download as fallback...")
+                try:
+                    downloaded_files, temp_dir = generator.download_mod_files(
+                        temp_mods, 
+                        result['mcVersion'], 
+                        result['modLoader']
+                    )
+                    
+                    if not downloaded_files:
+                        return jsonify({'error': f'Both Ferium and direct download failed. Ferium error: {str(e)}'}), 500
+                    
+                    print(f"⚠️  Using direct download fallback: {len(downloaded_files)} files downloaded")
+                    download_method = "direct"
+                except Exception as direct_error:
+                    return jsonify({'error': f'All download methods failed. Ferium: {str(e)}, Direct: {str(direct_error)}'}), 500
             
             try:
                 # Create ZIP with downloaded mod files
@@ -455,8 +536,9 @@ def download_file(session_id, file_type):
                     for file_info in downloaded_files:
                         zip_file.write(file_info['path'], f"mods/{file_info['filename']}")
                     
-                    # Add modpack info file
-                    info_content = f"""# ModSmith Generated Modpack (Downloaded with Ferium)
+                    # Add modpack info file with appropriate warnings
+                    if download_method == "ferium":
+                        info_content = f"""# ModSmith Generated Modpack (Downloaded with Ferium)
 
 🎯 MODPACK INFORMATION:
 Theme: {result['theme']}
@@ -464,6 +546,7 @@ Minecraft Version: {result['mcVersion']}
 Mod Loader: {result['modLoader']}
 Total Files Downloaded: {len(downloaded_files)}
 Generated: {result['generatedAt']}
+Download Method: Ferium (includes dependencies ✅)
 
 📦 IMPORTANT NOTES:
 - This modpack was downloaded using Ferium
@@ -479,8 +562,43 @@ Generated: {result['generatedAt']}
 
 ## Downloaded Files ({len(downloaded_files)} total):
 """
+                    else:
+                        info_content = f"""# ModSmith Generated Modpack (Direct Download - Dependencies Warning!)
+
+🎯 MODPACK INFORMATION:
+Theme: {result['theme']}
+Minecraft Version: {result['mcVersion']}
+Mod Loader: {result['modLoader']}
+Total Files Downloaded: {len(downloaded_files)}
+Generated: {result['generatedAt']}
+Download Method: Direct Download (Ferium fallback)
+
+⚠️  IMPORTANT DEPENDENCY WARNING:
+- This modpack was downloaded using direct API calls (Ferium failed)
+- Some mod dependencies might be missing!
+- You may need to manually install required libraries such as:
+  * Fabric API (for Fabric mods)
+  * Architectury API
+  * Geckolib
+  * Other common mod libraries
+
+🔧 INSTALLATION:
+1. Extract this ZIP file
+2. Copy the 'mods' folder to your Minecraft instance
+3. Make sure you have {result['modLoader']} for MC {result['mcVersion']} installed
+4. If mods don't work, check for missing dependencies on Modrinth
+5. Launch Minecraft and test
+
+## Downloaded Files ({len(downloaded_files)} total):
+"""
+                    
                     for file_info in downloaded_files:
-                        info_content += f"- {file_info['filename']} ({file_info['size'] // 1024} KB)\n"
+                        if download_method == "ferium":
+                            info_content += f"- {file_info['filename']} ({file_info['size'] // 1024} KB)\n"
+                        else:
+                            # For direct downloads, try to get mod name if available
+                            mod_name = getattr(file_info.get('mod'), 'name', file_info['filename'])
+                            info_content += f"- {mod_name} ({file_info['filename']}) - {file_info['size'] // 1024} KB\n"
                     
                     zip_file.writestr('INSTALLATION_GUIDE.txt', info_content)
                 
@@ -489,11 +607,12 @@ Generated: {result['generatedAt']}
                     shutil.rmtree(temp_dir)
                 
                 zip_buffer.seek(0)
+                filename_suffix = "ferium" if download_method == "ferium" else "direct"
                 return send_file(
                     io.BytesIO(zip_buffer.read()),
                     mimetype='application/zip',
                     as_attachment=True,
-                    download_name=f'modpack-{result["theme"]}-{result["mcVersion"]}-ferium.zip'
+                    download_name=f'modpack-{result["theme"]}-{result["mcVersion"]}-{filename_suffix}.zip'
                 )
                 
             except Exception as e:
