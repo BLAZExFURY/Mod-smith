@@ -787,9 +787,9 @@
                 <div class="download-card" onclick="downloadModFiles(event)">
                     <h4>
                         <i class="fas fa-archive" style="color: var(--success);"></i>
-                        Download Mod Files
+                        Download Mod Files (with Ferium)
                     </h4>
-                    <p>Download all mod .jar files in a ZIP ready to install directly into your mods folder.</p>
+                    <p>Download all mod .jar files using Ferium. Includes all dependencies automatically! ZIP contains ready-to-use mods folder.</p>
                 </div>
                 
                 <div class="download-card" onclick="downloadWithFerium()">
@@ -1143,7 +1143,7 @@
                 
                 // Show loading message
                 const originalContent = button.innerHTML;
-                button.innerHTML = '<h4><i class="fas fa-spinner fa-spin"></i> Downloading Mod Files...</h4><p>Please wait while we download the mod files...</p>';
+                button.innerHTML = '<h4><i class="fas fa-spinner fa-spin"></i> Downloading with Ferium...</h4><p>Using Ferium to download mods and dependencies. This may take a few minutes...</p>';
                 button.style.pointerEvents = 'none';
                 button.style.opacity = '0.7';
                 
@@ -1179,7 +1179,7 @@
                 console.log('Download triggered successfully');
                 
                 // Show success message
-                showSuccess('Mod files downloaded successfully! Extract the ZIP and copy the mods folder to your Minecraft instance.');
+                showSuccess('Mod files downloaded successfully with Ferium! All dependencies included. Extract the ZIP and copy the mods folder to your Minecraft instance.');
                 
                 // Restore button after success
                 setTimeout(() => {
@@ -1194,7 +1194,7 @@
                 
                 // Restore button after error
                 setTimeout(() => {
-                    button.innerHTML = '<h4><i class="fas fa-archive" style="color: var(--success);"></i> Download Mod Files</h4><p>Download all mod .jar files in a ZIP ready to install directly into your mods folder.</p>';
+                    button.innerHTML = '<h4><i class="fas fa-archive" style="color: var(--success);"></i> Download Mod Files (with Ferium)</h4><p>Download all mod .jar files using Ferium. Includes all dependencies automatically! ZIP contains ready-to-use mods folder.</p>';
                     button.style.pointerEvents = 'auto';
                     button.style.opacity = '1';
                 }, 1000);
