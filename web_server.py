@@ -521,15 +521,32 @@ def start_ferium_download(session_id):
         def start_download():
             try:
                 print(f"🚀 Starting Ferium download in background thread...")
-                print(f"📋 Downloading {len(result['valid_mods'])} mods:")
-                for mod in result['valid_mods']:
-                    print(f"  - {mod.name} ({mod.slug})")
+                
+                # Get mods data from result
+                mods_data = result.get('mods', [])
+                if not mods_data:
+                    raise Exception("No mods found in result")
+                
+                print(f"📋 Downloading {len(mods_data)} mods:")
+                for mod_data in mods_data:
+                    print(f"  - {mod_data['name']} ({mod_data['slug']})")
+                
+                # Create temporary ModInfo objects for the download function
+                class TempMod:
+                    def __init__(self, data):
+                        self.name = data['name']
+                        self.slug = data['slug']
+                        self.description = data.get('description', '')
+                        self.downloads = data.get('downloads', 0)
+                        self.categories = data.get('categories', [])
+                
+                temp_mods = [TempMod(mod_data) for mod_data in mods_data]
                 
                 # Use the generator's Ferium download method
                 success = generator.download_mod_files_with_ferium(
-                    result['valid_mods'],
-                    result['mc_version'],
-                    result['mod_loader']
+                    temp_mods,
+                    result['mcVersion'],
+                    result['modLoader']
                 )
                 
                 print(f"✅ Ferium download completed: Success = {success}")
