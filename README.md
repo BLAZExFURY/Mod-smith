@@ -14,7 +14,8 @@ Generate perfectly curated Minecraft modpacks using AI! ModSmith leverages Googl
 - 🔧 **Version & Loader Aware**: Supports all major Minecraft versions and mod loaders
 - ✅ **Modrinth Integration**: Validates all mods against Modrinth's database
 - 📚 **Learning System**: Improves suggestions over time by learning from failures
-- ⚡ **Ferium Compatible**: Generates ready-to-use mod lists for Ferium
+- ⚡ **Ferium Integration**: Automatic mod downloads with one-click setup
+- 📦 **Ready-to-Use Output**: Generates mod lists and downloads .jar files
 - 📊 **Comprehensive Diagnostics**: Clear insights into AI performance and failure attribution
 
 ## 🚀 Quick Start
@@ -63,27 +64,61 @@ Enter modpack theme: tech automation
    • 22 mods found and validated
    • Ready for installation with Ferium
    • Check generated/gen-mods.txt for the mod list
+
+🔽 Ferium Integration Available!
+Download mods automatically with Ferium? (y/N): y
+
+🔽 Downloading mods with Ferium...
+Creating temporary Ferium profile: modsmith-temp-1234567890
+Adding 22 mods to profile...
+[22/22] Adding: create                        ✓ Added
+📥 Downloading mods...
+✓ Downloaded 22 mod files to generated/gen-mods/
+
+📦 Mod Download Complete!
+   • Mods saved to: generated/gen-mods/
+   • Copy .jar files to your Minecraft mods folder
 ```
 
 ## 📁 Output Files
 
 All generated files are saved in the `generated/` folder:
 
-| File | Description |
-|------|-------------|
+| File/Folder | Description |
+|-------------|-------------|
 | `gen-mods.txt` | Mod slugs for Ferium installation |
+| `gen-mods/` | Downloaded .jar files (when using Ferium integration) |
 | `modpack-details.json` | Complete mod information and metadata |
 | `modpack-summary.md` | Human-readable summary with installation guide |
 | `learning_data.json` | AI learning data for improved future suggestions |
 
-## ⚡ Install with Ferium
+## ⚡ Automatic Mod Downloads
 
-[Ferium](https://github.com/gorilla-devs/ferium) is the fastest way to install your generated modpack:
+ModSmith can automatically download mods using [Ferium](https://github.com/gorilla-devs/ferium):
+
+### Quick Setup
+```bash
+# Install Ferium (choose one method)
+cargo install ferium              # Rust/Cargo
+brew install ferium              # macOS Homebrew  
+# Or download from: https://github.com/gorilla-devs/ferium/releases
+
+# Run ModSmith - it will offer to download mods automatically!
+python mod_generator.py
+```
+
+### What Happens:
+1. 🤖 ModSmith generates your modpack
+2. 🔍 Detects if Ferium is installed
+3. 💬 Asks if you want automatic download
+4. 📥 Downloads all mods to `generated/gen-mods/`
+5. 📂 Copy .jar files to your Minecraft mods folder
+
+## ⚡ Manual Install with Ferium
+
+If you prefer manual control or automatic download fails:
 
 ```bash
-# Install Ferium (one-time setup)
-cargo install ferium
-
 # Create a new profile
 ferium profile create
 

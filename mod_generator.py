@@ -11,6 +11,8 @@ import sys
 import json
 import time
 import requests
+import subprocess
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Tuple
@@ -712,6 +714,32 @@ class MinecraftModGenerator:
             print(f"{Fore.GREEN}   • Ready for installation with Ferium")
             print(f"{Fore.YELLOW}   • Check generated/gen-mods.txt for the mod list")
             
+            # Ask user if they want to download mods with Ferium
+            if self.check_ferium_installed():
+                print(f"\n{Fore.CYAN}{Style.BRIGHT}🔽 Ferium Integration Available!")
+                download_choice = input(f"{Fore.YELLOW}Download mods automatically with Ferium? (y/N): {Style.RESET_ALL}").strip().lower()
+                
+                if download_choice in ['y', 'yes']:
+                    gen_mods_path = Path("generated/gen-mods.txt")
+                    success = self.download_mods_with_ferium(gen_mods_path, mc_version, mod_loader)
+                    
+                    if success:
+                        print(f"\n{Fore.GREEN}{Style.BRIGHT}📦 Mod Download Complete!")
+                        print(f"{Fore.GREEN}   • Mods saved to: generated/gen-mods/")
+                        print(f"{Fore.GREEN}   • Copy .jar files to your Minecraft mods folder")
+                    else:
+                        print(f"\n{Fore.YELLOW}⚠ Automatic download failed, but you can still:")
+                        print(f"{Fore.YELLOW}   • Use the gen-mods.txt file manually")
+                        print(f"{Fore.YELLOW}   • Follow the Ferium instructions in the summary")
+                else:
+                    print(f"\n{Fore.BLUE}ℹ Manual installation:")
+                    print(f"{Fore.BLUE}   • Use generated/gen-mods.txt with Ferium")
+                    print(f"{Fore.BLUE}   • See generated/modpack-summary.md for instructions")
+            else:
+                print(f"\n{Fore.BLUE}ℹ To enable automatic downloads:")
+                print(f"{Fore.BLUE}   • Install Ferium: https://github.com/gorilla-devs/ferium")
+                print(f"{Fore.BLUE}   • Then use generated/gen-mods.txt for easy installation")
+            
             # Show learning summary
             if self.failed_mods:
                 print(f"\n{Fore.BLUE}{Style.BRIGHT}📚 Learning Summary:")
@@ -764,6 +792,113 @@ class MinecraftModGenerator:
             print(f"{Fore.BLUE}💾 Saved learning data for future runs{Style.RESET_ALL}")
         except Exception as e:
             self.print_warning(f"Could not save learning data: {e}")
+    
+    def check_ferium_installed(self) -> bool:
+        """Check if Ferium is installed and available"""
+        try:
+            result = subprocess.run(['ferium', '--version'], 
+                                  capture_output=True, text=True, timeout=10)
+            return result.returncode == 0
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            return False
+    
+    def download_mods_with_ferium(self, gen_mods_path: Path, mc_version: str, mod_loader: str) -> bool:
+        """Use Ferium to download mods from gen-mods.txt"""
+        
+        if not self.check_ferium_installed():
+            self.print_warning("Ferium not found! Skipping automatic mod download.")
+            self.print_info("Install Ferium: https://github.com/gorilla-devs/ferium")
+            return False
+        
+        self.print_info("🔽 Downloading mods with Ferium...")
+        
+        # Create mods download directory (ensure absolute path for Ferium)
+        mods_dir = (gen_mods_path.parent / "gen-mods").resolve()
+        mods_dir.mkdir(exist_ok=True)
+        
+        # Create temporary profile name
+        temp_profile = f"modsmith-temp-{int(time.time())}"
+        
+        try:
+            # Create Ferium profile
+            self.print_info(f"Creating temporary Ferium profile: {temp_profile}")
+            create_cmd = [
+                'ferium', 'profile', 'create',
+                '--name', temp_profile,
+                '--game-version', mc_version,
+                '--mod-loader', mod_loader,
+                '--output-dir', str(mods_dir)
+            ]
+            
+            result = subprocess.run(create_cmd, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0:
+                self.print_error(f"Failed to create Ferium profile: {result.stderr}")
+                return False
+            
+            # Switch to the profile
+            switch_cmd = ['ferium', 'profile', 'switch', temp_profile]
+            result = subprocess.run(switch_cmd, capture_output=True, text=True, timeout=10)
+            if result.returncode != 0:
+                self.print_error(f"Failed to switch to profile: {result.stderr}")
+                return False
+            
+            # Read mod slugs from gen-mods.txt
+            mod_slugs = []
+            with open(gen_mods_path, 'r', encoding='utf-8') as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith('#'):
+                        mod_slugs.append(line)
+            
+            # Add mods to profile
+            self.print_info(f"Adding {len(mod_slugs)} mods to profile...")
+            failed_mods = []
+            
+            for i, slug in enumerate(mod_slugs, 1):
+                print(f"{Fore.CYAN}[{i:2d}/{len(mod_slugs)}] Adding: {slug:<30}", end="")
+                
+                add_cmd = ['ferium', 'add', slug]
+                result = subprocess.run(add_cmd, capture_output=True, text=True, timeout=15)
+                
+                if result.returncode == 0:
+                    print(f"{Fore.GREEN}✓ Added")
+                else:
+                    print(f"{Fore.RED}✗ Failed")
+                    failed_mods.append(slug)
+                
+                # Small delay to be nice to APIs
+                time.sleep(0.5)
+            
+            if failed_mods:
+                self.print_warning(f"Failed to add {len(failed_mods)} mods: {', '.join(failed_mods[:5])}")
+            
+            # Download all mods
+            self.print_info("📥 Downloading mods...")
+            download_cmd = ['ferium', 'upgrade']
+            result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=300)
+            
+            if result.returncode == 0:
+                # Count downloaded files
+                mod_files = list(mods_dir.glob("*.jar"))
+                self.print_success(f"Downloaded {len(mod_files)} mod files to {mods_dir}")
+                return True
+            else:
+                self.print_error(f"Failed to download mods: {result.stderr}")
+                return False
+                
+        except subprocess.TimeoutExpired:
+            self.print_error("Ferium operation timed out")
+            return False
+        except Exception as e:
+            self.print_error(f"Error during Ferium operation: {e}")
+            return False
+        finally:
+            # Clean up: delete temporary profile
+            try:
+                delete_cmd = ['ferium', 'profile', 'delete', temp_profile, '--force']
+                subprocess.run(delete_cmd, capture_output=True, text=True, timeout=10)
+            except:
+                pass  # Ignore cleanup errors
 
 def main():
     """Entry point of the application"""
