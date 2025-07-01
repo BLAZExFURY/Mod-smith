@@ -5,6 +5,37 @@ All notable changes to ModSmith will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-07-01
+
+### Added - Enhanced UI & Transparency Features 🎨
+
+#### Black & White Theme
+- **Professional Monochrome Design**: Switched from colorful gradients to elegant black and white theme
+- **Improved Readability**: Enhanced contrast and professional appearance
+- **Clean Aesthetics**: Minimalist design focused on functionality
+
+#### Failed Mods Display
+- **Transparency Feature**: Shows which AI suggestions were not found in Modrinth
+- **Failed Mods Section**: Dedicated section displaying unsuccessful mod searches
+- **Enhanced Statistics**: Updated stats to show "Found Mods" vs "Not Found" counts
+- **User Education**: Clear explanations of why mods might not be found
+
+#### Technical Improvements
+- **Backend Tracking**: WebModGenerator now captures and returns failed mod suggestions
+- **Frontend Enhancement**: JavaScript updated to display failed mods with warning indicators
+- **Better Metrics**: More accurate success rate calculations including all AI suggestions
+
+### Enhanced
+- **CSS Variables**: Updated color scheme to use professional black/white/gray palette
+- **User Interface**: Cleaner, more professional appearance throughout
+- **Error Reporting**: Better visibility into AI performance and limitations
+- **Statistics Display**: More informative mod generation statistics
+
+### Fixed
+- **Startup Script Issues**: Resolved virtual environment creation problems
+- **Dependencies**: Fixed externally-managed-environment errors
+- **Python Command**: Updated scripts to use python3 instead of python
+
 ## [2.0.0] - 2024-12-19
 
 ### Added - Major Web Interface Release 🌐
