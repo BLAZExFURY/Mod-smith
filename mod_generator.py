@@ -878,10 +878,8 @@ class MinecraftModGenerator:
             result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=300)
             
             if result.returncode == 0:
-                # Count downloaded files
-                mod_files = list(mods_dir.glob("*.jar"))
-                self.print_success(f"Downloaded {len(mod_files)} mod files to {mods_dir}")
-                return True
+                # Post-download verification - check what was actually downloaded
+                return self.verify_downloaded_mods(mods_dir, mod_slugs, failed_mods)
             else:
                 self.print_error(f"Failed to download mods: {result.stderr}")
                 return False
@@ -899,6 +897,128 @@ class MinecraftModGenerator:
                 subprocess.run(delete_cmd, capture_output=True, text=True, timeout=10)
             except:
                 pass  # Ignore cleanup errors
+
+    def verify_downloaded_mods(self, mods_dir: Path, expected_slugs: List[str], failed_to_add: List[str]) -> bool:
+        """Verify downloaded mods and provide fallback options for missing ones"""
+        
+        # Count downloaded files
+        mod_files = list(mods_dir.glob("*.jar"))
+        total_expected = len(expected_slugs) - len(failed_to_add)  # Subtract mods that failed to add
+        
+        self.print_success(f"Downloaded {len(mod_files)} mod files to {mods_dir}")
+        
+        # If we got fewer files than expected, investigate
+        if len(mod_files) < total_expected:
+            missing_count = total_expected - len(mod_files)
+            self.print_warning(f"Expected {total_expected} mods, but only found {len(mod_files)} JAR files")
+            
+            # Try to identify which mods might be missing
+            self.print_info("🔍 Analyzing downloaded files...")
+            
+            # Get file names for comparison
+            downloaded_names = [f.stem.lower() for f in mod_files]
+            
+            # Check which expected slugs might be missing
+            potentially_missing = []
+            for slug in expected_slugs:
+                if slug not in failed_to_add:  # Only check mods that were successfully added
+                    # Check if any downloaded file contains part of the slug name
+                    found_match = any(slug.lower().replace('-', '').replace('_', '') in 
+                                    name.lower().replace('-', '').replace('_', '') for name in downloaded_names)
+                    if not found_match:
+                        potentially_missing.append(slug)
+            
+            if potentially_missing:
+                self.print_warning(f"Potentially missing mods: {', '.join(potentially_missing[:5])}")
+                
+                # Offer fallback options
+                self.print_info("🔄 Fallback options:")
+                self.print_info("  • Some mods may have been downloaded with different filenames")
+                self.print_info("  • Some mods may have dependencies that weren't in the original list")
+                self.print_info("  • You can manually add missing mods using: ferium add <mod-slug>")
+                
+                # Create a report file for manual verification
+                report_path = mods_dir.parent / "download-report.txt"
+                with open(report_path, 'w', encoding='utf-8') as f:
+                    f.write("ModSmith + Ferium Download Report\n")
+                    f.write("=" * 40 + "\n\n")
+                    f.write(f"Expected mods: {len(expected_slugs)}\n")
+                    f.write(f"Failed to add: {len(failed_to_add)}\n")
+                    f.write(f"Expected downloads: {total_expected}\n")
+                    f.write(f"Actual downloads: {len(mod_files)}\n\n")
+                    
+                    if failed_to_add:
+                        f.write("Mods that failed to add to profile:\n")
+                        for mod in failed_to_add:
+                            f.write(f"  • {mod}\n")
+                        f.write("\n")
+                    
+                    if potentially_missing:
+                        f.write("Potentially missing mods (may need manual addition):\n")
+                        for mod in potentially_missing:
+                            f.write(f"  • {mod}\n")
+                        f.write("\n")
+                    
+                    f.write("Downloaded files:\n")
+                    for mod_file in sorted(mod_files):
+                        f.write(f"  • {mod_file.name}\n")
+                    
+                    f.write("\nManual commands to add missing mods:\n")
+                    for mod in potentially_missing:
+                        f.write(f"ferium add {mod}\n")
+                
+                self.print_info(f"📋 Detailed report saved to: {report_path}")
+        
+        # Additional verification - check for common mod types
+        self.print_info("🔍 Verifying mod types...")
+        
+        # Check for essential mod categories
+        essential_patterns = {
+            'jei': ['jei', 'just-enough-items', 'just_enough_items'],
+            'performance': ['sodium', 'lithium', 'phosphor', 'optifine', 'rubidium'],
+            'storage': ['storage', 'drawers', 'chests', 'iron-chests'],
+            'utility': ['waystones', 'waystone', 'journeymap', 'minimap', 'rei'],
+            'worldgen': ['biomes', 'structures', 'dungeons', 'terraform']
+        }
+        
+        found_categories = {}
+        for category, patterns in essential_patterns.items():
+            found_categories[category] = []
+            for mod_file in mod_files:
+                mod_name = mod_file.stem.lower()
+                for pattern in patterns:
+                    if pattern in mod_name:
+                        found_categories[category].append(mod_file.name)
+                        break
+        
+        # Report on mod categories
+        print(f"\n{Fore.CYAN}📊 Mod Category Analysis:{Style.RESET_ALL}")
+        for category, mods in found_categories.items():
+            if mods:
+                print(f"{Fore.GREEN}  ✓ {category.title()}: {len(mods)} mod(s)")
+            else:
+                print(f"{Fore.YELLOW}  ○ {category.title()}: No mods detected")
+        
+        # Success criteria: got some mods, even if not all expected
+        if len(mod_files) > 0:
+            success_rate = (len(mod_files) / max(len(expected_slugs), 1)) * 100
+            print(f"\n{Fore.GREEN}📈 Download Success Rate: {success_rate:.1f}%{Style.RESET_ALL}")
+            
+            if success_rate >= 80:
+                print(f"{Fore.GREEN}🎉 Excellent! Most mods downloaded successfully.{Style.RESET_ALL}")
+            elif success_rate >= 60:
+                print(f"{Fore.YELLOW}✅ Good! Majority of mods downloaded. Check report for missing ones.{Style.RESET_ALL}")
+            else:
+                print(f"{Fore.YELLOW}⚠ Partial success. Many mods may need manual installation.{Style.RESET_ALL}")
+            
+            return True
+        else:
+            self.print_error("No mod files were downloaded!")
+            self.print_info("Possible issues:")
+            self.print_info("  • Network connectivity problems")
+            self.print_info("  • Ferium configuration issues")
+            self.print_info("  • All mods failed to download")
+            return False
 
 def main():
     """Entry point of the application"""
