@@ -127,23 +127,20 @@ class WebModGenerator(MinecraftModGenerator):
             raise e
 
     def download_mod_files_with_ferium(self, valid_mods, mc_version, mod_loader):
-        """Download mod files using Ferium (includes dependencies) and return temp directory"""
-        import tempfile
+        """Download mod files using Ferium directly into generated/gen-mods/ folder"""
         import subprocess
-        import shutil
         from pathlib import Path
         
-        # Create temporary directory for downloads
-        temp_dir = Path(tempfile.mkdtemp(prefix='modsmith_ferium_'))
-        mods_dir = temp_dir / 'mods'
+        # Use generated/gen-mods directory for downloads (ensure absolute path for Ferium)
+        mods_dir = Path("generated/gen-mods").resolve()
         mods_dir.mkdir(parents=True, exist_ok=True)
         
         try:
             print(f"📥 Downloading {len(valid_mods)} mods using Ferium...")
-            print(f"📁 Temporary directory: {temp_dir}")
+            print(f"📁 Download directory: {mods_dir}")
             
             # Create unique profile name
-            profile_name = f"modsmith-temp-{int(time.time())}"
+            profile_name = f"modsmith-web-{int(time.time())}"
             
             # Create Ferium profile with explicit output directory
             print(f"🔧 Creating Ferium profile: {profile_name}")
@@ -206,7 +203,7 @@ class WebModGenerator(MinecraftModGenerator):
             
             # Download all mods (including dependencies) with verbose output
             print(f"🚀 Downloading mods with Ferium (this includes dependencies automatically)...")
-            download_cmd = ['ferium', 'upgrade', '--verbose']
+            download_cmd = ['ferium', 'upgrade']
             print(f"Running: {' '.join(download_cmd)}")
             
             result = subprocess.run(download_cmd, capture_output=True, text=True, timeout=300)  # 5 minute timeout
@@ -238,8 +235,8 @@ class WebModGenerator(MinecraftModGenerator):
             else:
                 print(f"❌ Mods directory does not exist: {mods_dir}")
             
-            # Also check the temp directory root for any files
-            for jar_file in temp_dir.rglob('*.jar'):
+            # Also check the mods directory root for any additional files
+            for jar_file in mods_dir.rglob('*.jar'):
                 if jar_file not in [f['path'] for f in downloaded_files]:
                     file_size = jar_file.stat().st_size
                     downloaded_files.append({
@@ -249,14 +246,34 @@ class WebModGenerator(MinecraftModGenerator):
                     })
                     print(f"    ✓ Found additional file: {jar_file.name} ({file_size // 1024} KB)")
             
-            print(f"✅ Ferium download complete: {len(downloaded_files)} files found")
+            print(f"✅ Ferium download complete: {len(downloaded_files)} files found in {mods_dir}")
             
             # Clean up Ferium profile
             try:
                 print(f"🧹 Cleaning up Ferium profile: {profile_name}")
+                # First switch to a different profile if it exists, then delete
+                list_result = subprocess.run(['ferium', 'profile', 'list'], capture_output=True, text=True, timeout=10)
+                if 'modsmith-web-' in list_result.stdout:
+                    # Try to switch to first available profile that's not ours, or create a dummy one
+                    try:
+                        subprocess.run(['ferium', 'profile', 'create', '--name', 'temp-cleanup', '--game-version', '1.20.1', '--mod-loader', 'forge'], capture_output=True, text=True, timeout=10)
+                        subprocess.run(['ferium', 'profile', 'switch', 'temp-cleanup'], capture_output=True, text=True, timeout=10)
+                    except:
+                        pass
+                
                 delete_cmd = ['ferium', 'profile', 'delete', profile_name, '--force']
-                subprocess.run(delete_cmd, capture_output=True, text=True, timeout=10)
-                print(f"✅ Cleaned up Ferium profile: {profile_name}")
+                delete_result = subprocess.run(delete_cmd, capture_output=True, text=True, timeout=10)
+                if delete_result.returncode == 0:
+                    print(f"✅ Cleaned up Ferium profile: {profile_name}")
+                else:
+                    print(f"⚠️  Could not delete profile: {delete_result.stderr}")
+                    
+                # Clean up temp profile too
+                try:
+                    subprocess.run(['ferium', 'profile', 'delete', 'temp-cleanup', '--force'], capture_output=True, text=True, timeout=10)
+                except:
+                    pass
+                    
             except Exception as cleanup_error:
                 print(f"⚠️  Could not clean up Ferium profile: {cleanup_error}")
             
@@ -269,7 +286,7 @@ class WebModGenerator(MinecraftModGenerator):
                 
                 raise Exception("No mod files were downloaded by Ferium. This could be due to version compatibility issues or network problems.")
             
-            return downloaded_files, temp_dir
+            return len(downloaded_files) > 0  # Return success status
             
         except subprocess.TimeoutExpired:
             raise Exception("Ferium download timed out (5 minutes). Try with fewer mods or check your internet connection.")
@@ -277,9 +294,6 @@ class WebModGenerator(MinecraftModGenerator):
             raise Exception("Ferium not found. Please install Ferium: https://github.com/gorilla-devs/ferium")
         except Exception as e:
             print(f"❌ Error in Ferium download: {e}")
-            # Clean up on error
-            if temp_dir.exists():
-                shutil.rmtree(temp_dir)
             raise Exception(f"Ferium download failed: {str(e)}")
 
     def download_mod_files(self, valid_mods, mc_version, mod_loader):
@@ -455,172 +469,6 @@ def download_file(session_id, file_type):
             if file_path.exists():
                 return send_file(file_path, as_attachment=True, download_name='modpack-summary.md')
         
-        elif file_type == 'mod-files':
-            # Download actual mod .jar files using Ferium and create ZIP
-            print(f"🔄 Starting Ferium-based mod files download for session {session_id}")
-            
-            result = generator.progress.get('result')
-            if not result:
-                print("❌ No result data available")
-                return jsonify({'error': 'No result data available'}), 400
-            
-            # Get mod data from the result
-            mods_data = result.get('mods', [])
-            if not mods_data:
-                print("❌ No mods found in result")
-                return jsonify({'error': 'No mods found in result'}), 400
-            
-            print(f"📋 Found {len(mods_data)} mods to download with Ferium")
-            
-            # Create temporary mod objects for downloading
-            class TempMod:
-                def __init__(self, data):
-                    self.name = data['name']
-                    self.slug = data['slug']
-                    self.description = data.get('description', '')
-                    self.downloads = data.get('downloads', 0)
-                    self.categories = data.get('categories', [])
-            
-            temp_mods = [TempMod(mod_data) for mod_data in mods_data]
-            
-            # Download mod files using Ferium (includes dependencies!)
-            print(f"🚀 Starting Ferium download (includes dependencies automatically)...")
-            try:
-                downloaded_files, temp_dir = generator.download_mod_files_with_ferium(
-                    temp_mods, 
-                    result['mcVersion'], 
-                    result['modLoader']
-                )
-                
-                if not downloaded_files:
-                    print("❌ Ferium failed to download any mod files, trying direct download as fallback...")
-                    # Fallback to direct download with warning
-                    downloaded_files, temp_dir = generator.download_mod_files(
-                        temp_mods, 
-                        result['mcVersion'], 
-                        result['modLoader']
-                    )
-                    
-                    if not downloaded_files:
-                        return jsonify({'error': 'Both Ferium and direct download failed. Please check your internet connection and try again.'}), 500
-                    
-                    print(f"⚠️  Using direct download fallback: {len(downloaded_files)} files downloaded")
-                    download_method = "direct"
-                else:
-                    print(f"✅ Ferium downloaded {len(downloaded_files)} files (including dependencies)")
-                    download_method = "ferium"
-                
-            except Exception as e:
-                print(f"❌ Ferium download error: {e}")
-                print("🔄 Trying direct download as fallback...")
-                try:
-                    downloaded_files, temp_dir = generator.download_mod_files(
-                        temp_mods, 
-                        result['mcVersion'], 
-                        result['modLoader']
-                    )
-                    
-                    if not downloaded_files:
-                        return jsonify({'error': f'Both Ferium and direct download failed. Ferium error: {str(e)}'}), 500
-                    
-                    print(f"⚠️  Using direct download fallback: {len(downloaded_files)} files downloaded")
-                    download_method = "direct"
-                except Exception as direct_error:
-                    return jsonify({'error': f'All download methods failed. Ferium: {str(e)}, Direct: {str(direct_error)}'}), 500
-            
-            try:
-                # Create ZIP with downloaded mod files
-                zip_buffer = io.BytesIO()
-                with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
-                    # Add each downloaded mod file
-                    for file_info in downloaded_files:
-                        zip_file.write(file_info['path'], f"mods/{file_info['filename']}")
-                    
-                    # Add modpack info file with appropriate warnings
-                    if download_method == "ferium":
-                        info_content = f"""# ModSmith Generated Modpack (Downloaded with Ferium)
-
-🎯 MODPACK INFORMATION:
-Theme: {result['theme']}
-Minecraft Version: {result['mcVersion']}
-Mod Loader: {result['modLoader']}
-Total Files Downloaded: {len(downloaded_files)}
-Generated: {result['generatedAt']}
-Download Method: Ferium (includes dependencies ✅)
-
-📦 IMPORTANT NOTES:
-- This modpack was downloaded using Ferium
-- Dependencies are automatically included
-- All mods should work together without issues
-- Simply extract and copy the 'mods' folder to your Minecraft instance
-
-🔧 INSTALLATION:
-1. Extract this ZIP file
-2. Copy the 'mods' folder to your Minecraft instance
-3. Make sure you have {result['modLoader']} for MC {result['mcVersion']} installed
-4. Launch Minecraft and enjoy!
-
-## Downloaded Files ({len(downloaded_files)} total):
-"""
-                    else:
-                        info_content = f"""# ModSmith Generated Modpack (Direct Download - Dependencies Warning!)
-
-🎯 MODPACK INFORMATION:
-Theme: {result['theme']}
-Minecraft Version: {result['mcVersion']}
-Mod Loader: {result['modLoader']}
-Total Files Downloaded: {len(downloaded_files)}
-Generated: {result['generatedAt']}
-Download Method: Direct Download (Ferium fallback)
-
-⚠️  IMPORTANT DEPENDENCY WARNING:
-- This modpack was downloaded using direct API calls (Ferium failed)
-- Some mod dependencies might be missing!
-- You may need to manually install required libraries such as:
-  * Fabric API (for Fabric mods)
-  * Architectury API
-  * Geckolib
-  * Other common mod libraries
-
-🔧 INSTALLATION:
-1. Extract this ZIP file
-2. Copy the 'mods' folder to your Minecraft instance
-3. Make sure you have {result['modLoader']} for MC {result['mcVersion']} installed
-4. If mods don't work, check for missing dependencies on Modrinth
-5. Launch Minecraft and test
-
-## Downloaded Files ({len(downloaded_files)} total):
-"""
-                    
-                    for file_info in downloaded_files:
-                        if download_method == "ferium":
-                            info_content += f"- {file_info['filename']} ({file_info['size'] // 1024} KB)\n"
-                        else:
-                            # For direct downloads, try to get mod name if available
-                            mod_name = getattr(file_info.get('mod'), 'name', file_info['filename'])
-                            info_content += f"- {mod_name} ({file_info['filename']}) - {file_info['size'] // 1024} KB\n"
-                    
-                    zip_file.writestr('INSTALLATION_GUIDE.txt', info_content)
-                
-                # Clean up temp directory
-                if temp_dir and temp_dir.exists():
-                    shutil.rmtree(temp_dir)
-                
-                zip_buffer.seek(0)
-                filename_suffix = "ferium" if download_method == "ferium" else "direct"
-                return send_file(
-                    io.BytesIO(zip_buffer.read()),
-                    mimetype='application/zip',
-                    as_attachment=True,
-                    download_name=f'modpack-{result["theme"]}-{result["mcVersion"]}-{filename_suffix}.zip'
-                )
-                
-            except Exception as e:
-                # Clean up temp directory on error
-                if temp_dir and temp_dir.exists():
-                    shutil.rmtree(temp_dir)
-                return jsonify({'error': f'Failed to create mod files ZIP: {str(e)}'}), 500
-
         elif file_type == 'all':
             # Create zip with all files
             zip_buffer = io.BytesIO()
@@ -672,9 +520,9 @@ def start_ferium_download(session_id):
         # Start Ferium download in background
         def start_download():
             try:
-                gen_mods_path = Path("generated/gen-mods.txt")
-                success = generator.download_mods_with_ferium(
-                    gen_mods_path,
+                # Use the generator's Ferium download method
+                success = generator.download_mod_files_with_ferium(
+                    result['valid_mods'],
                     result['mc_version'],
                     result['mod_loader']
                 )

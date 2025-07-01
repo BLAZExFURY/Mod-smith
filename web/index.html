@@ -784,20 +784,13 @@
             </h3>
             
             <div class="download-options">
-                <div class="download-card" onclick="downloadModFiles(event)">
-                    <h4>
-                        <i class="fas fa-archive" style="color: var(--success);"></i>
-                        Download Mod Files (with Ferium)
-                    </h4>
-                    <p>Download all mod .jar files using Ferium. Includes all dependencies automatically! ZIP contains ready-to-use mods folder.</p>
-                </div>
-                
                 <div class="download-card" onclick="downloadWithFerium()">
                     <h4>
-                        <i class="fas fa-magic" style="color: var(--primary);"></i>
-                        Automatic with Ferium
+                        <i class="fas fa-download" style="color: var(--primary);"></i>
+                        Download Mods with Ferium
                     </h4>
-                    <p>Download all mods automatically using Ferium integration. Requires Ferium to be installed.</p>
+                    <p>Download all mod .jar files directly to the server's generated/gen-mods/ folder using Ferium. Includes all dependencies automatically!</p>
+                </div>
                 </div>
                 
                 <div class="download-card" onclick="downloadManual()">
@@ -1109,105 +1102,25 @@
         }
 
         // Download functions
-        async function downloadModFiles(event) {
-            console.log('downloadModFiles called');
-            
-            if (!window.currentSessionId) {
-                showError('No active session found');
-                return;
-            }
-            
-            // Get the clicked element
-            let button;
-            if (event && event.currentTarget) {
-                button = event.currentTarget;
-            } else {
-                // Fallback: find the button by its content
-                const buttons = document.querySelectorAll('.download-card');
-                for (let btn of buttons) {
-                    if (btn.innerHTML.includes('Download Mod Files')) {
-                        button = btn;
-                        break;
-                    }
-                }
-            }
-            
-            if (!button) {
-                console.error('Could not find download button');
-                showError('Could not find download button');
-                return;
-            }
-            
-            try {
-                console.log('Starting mod files download...');
-                
-                // Show loading message
-                const originalContent = button.innerHTML;
-                button.innerHTML = '<h4><i class="fas fa-spinner fa-spin"></i> Downloading with Ferium...</h4><p>Using Ferium to download mods and dependencies. This may take a few minutes...</p>';
-                button.style.pointerEvents = 'none';
-                button.style.opacity = '0.7';
-                
-                console.log(`Fetching: /api/download/${window.currentSessionId}/mod-files`);
-                
-                const response = await fetch(`/api/download/${window.currentSessionId}/mod-files`);
-                console.log('Response status:', response.status);
-                
-                if (!response.ok) {
-                    const error = await response.json();
-                    console.error('Server error:', error);
-                    throw new Error(error.error || 'Failed to download mod files');
-                }
-                
-                console.log('Converting response to blob...');
-                const blob = await response.blob();
-                console.log('Blob size:', blob.size);
-                
-                if (blob.size === 0) {
-                    throw new Error('Downloaded file is empty');
-                }
-                
-                // Trigger download
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `modpack-${currentModpack.theme}-${currentModpack.mcVersion}.zip`;
-                document.body.appendChild(a); // Add to DOM for Firefox compatibility
-                a.click();
-                document.body.removeChild(a); // Clean up
-                URL.revokeObjectURL(url);
-                
-                console.log('Download triggered successfully');
-                
-                // Show success message
-                showSuccess('Mod files downloaded successfully with Ferium! All dependencies included. Extract the ZIP and copy the mods folder to your Minecraft instance.');
-                
-                // Restore button after success
-                setTimeout(() => {
-                    button.innerHTML = originalContent;
-                    button.style.pointerEvents = 'auto';
-                    button.style.opacity = '1';
-                }, 2000);
-                
-            } catch (error) {
-                console.error('Download error:', error);
-                showError('Failed to download mod files: ' + error.message);
-                
-                // Restore button after error
-                setTimeout(() => {
-                    button.innerHTML = '<h4><i class="fas fa-archive" style="color: var(--success);"></i> Download Mod Files (with Ferium)</h4><p>Download all mod .jar files using Ferium. Includes all dependencies automatically! ZIP contains ready-to-use mods folder.</p>';
-                    button.style.pointerEvents = 'auto';
-                    button.style.opacity = '1';
-                }, 1000);
-            }
-        }
-
         async function downloadWithFerium() {
             if (!window.currentSessionId) {
                 showError('No active session found');
                 return;
             }
 
+            const button = document.querySelector('.download-card');
+            if (!button) {
+                showError('Could not find download button');
+                return;
+            }
+
             try {
+                // Show loading state
+                const originalContent = button.innerHTML;
+                button.innerHTML = '<h4><i class="fas fa-spinner fa-spin"></i> Downloading Mods...</h4><p>Using Ferium to download mods and dependencies to generated/gen-mods/ folder. This may take a few minutes...</p>';
+                button.style.pointerEvents = 'none';
+                button.style.opacity = '0.7';
+
                 const response = await fetch(`/api/ferium/${window.currentSessionId}`, {
                     method: 'POST'
                 });
@@ -1218,15 +1131,59 @@
                     throw new Error(result.error || 'Failed to start Ferium download');
                 }
                 
-                // Show progress notification
-                alert('🚀 Ferium download started!\n\nMods are being downloaded in the background. This may take a few minutes depending on the number of mods.');
+                // Show success message
+                showSuccess('🚀 Ferium download started!\n\nMods are being downloaded to the server\'s generated/gen-mods/ folder. Check the server console for progress updates.');
                 
-                // You could add real-time progress tracking here
+                // Start polling for completion status
+                pollFeriumStatus();
+                
+                // Restore button after a delay
+                setTimeout(() => {
+                    button.innerHTML = originalContent;
+                    button.style.pointerEvents = 'auto';
+                    button.style.opacity = '1';
+                }, 3000);
                 
             } catch (error) {
                 console.error('Ferium download error:', error);
-                showError(error.message);
+                showError('Failed to start Ferium download: ' + error.message);
+                
+                // Restore button
+                setTimeout(() => {
+                    button.innerHTML = '<h4><i class="fas fa-download" style="color: var(--primary);"></i> Download Mods with Ferium</h4><p>Download all mod .jar files directly to the server\'s generated/gen-mods/ folder using Ferium. Includes all dependencies automatically!</p>';
+                    button.style.pointerEvents = 'auto';
+                    button.style.opacity = '1';
+                }, 1000);
             }
+        }
+
+        function pollFeriumStatus() {
+            // Poll every 5 seconds to check download status
+            const pollInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`/api/progress/${window.currentSessionId}`);
+                    const data = await response.json();
+                    
+                    if (data.ferium_status === 'completed') {
+                        clearInterval(pollInterval);
+                        if (data.ferium_success) {
+                            showSuccess('✅ Ferium download completed successfully! Mods are now available in the generated/gen-mods/ folder on the server.');
+                        } else {
+                            showError('❌ Ferium download completed but some mods may have failed to download. Check the server console for details.');
+                        }
+                    } else if (data.ferium_status === 'error') {
+                        clearInterval(pollInterval);
+                        showError('❌ Ferium download failed: ' + (data.ferium_error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error polling Ferium status:', error);
+                }
+            }, 5000);
+            
+            // Stop polling after 10 minutes (timeout)
+            setTimeout(() => {
+                clearInterval(pollInterval);
+            }, 600000);
         }
 
         async function downloadManual() {

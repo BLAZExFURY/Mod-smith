@@ -714,31 +714,31 @@ class MinecraftModGenerator:
             print(f"{Fore.GREEN}   • Ready for installation with Ferium")
             print(f"{Fore.YELLOW}   • Check generated/gen-mods.txt for the mod list")
             
-            # Ask user if they want to download mods with Ferium
+            # Automatically download mods with Ferium (strict Ferium-only approach)
             if self.check_ferium_installed():
-                print(f"\n{Fore.CYAN}{Style.BRIGHT}🔽 Ferium Integration Available!")
-                download_choice = input(f"{Fore.YELLOW}Download mods automatically with Ferium? (y/N): {Style.RESET_ALL}").strip().lower()
+                print(f"\n{Fore.CYAN}{Style.BRIGHT}🔽 Downloading mods with Ferium...")
+                gen_mods_path = Path("generated/gen-mods.txt")
+                success = self.download_mods_with_ferium(gen_mods_path, mc_version, mod_loader)
                 
-                if download_choice in ['y', 'yes']:
-                    gen_mods_path = Path("generated/gen-mods.txt")
-                    success = self.download_mods_with_ferium(gen_mods_path, mc_version, mod_loader)
-                    
-                    if success:
-                        print(f"\n{Fore.GREEN}{Style.BRIGHT}📦 Mod Download Complete!")
-                        print(f"{Fore.GREEN}   • Mods saved to: generated/gen-mods/")
-                        print(f"{Fore.GREEN}   • Copy .jar files to your Minecraft mods folder")
-                    else:
-                        print(f"\n{Fore.YELLOW}⚠ Automatic download failed, but you can still:")
-                        print(f"{Fore.YELLOW}   • Use the gen-mods.txt file manually")
-                        print(f"{Fore.YELLOW}   • Follow the Ferium instructions in the summary")
+                if success:
+                    print(f"\n{Fore.GREEN}{Style.BRIGHT}📦 Mod Download Complete!")
+                    print(f"{Fore.GREEN}   • Mods saved to: generated/downloaded-mods/")
+                    print(f"{Fore.GREEN}   • Copy .jar files to your Minecraft mods folder")
+                    print(f"{Fore.GREEN}   • All dependencies automatically included by Ferium")
                 else:
-                    print(f"\n{Fore.BLUE}ℹ Manual installation:")
-                    print(f"{Fore.BLUE}   • Use generated/gen-mods.txt with Ferium")
-                    print(f"{Fore.BLUE}   • See generated/modpack-summary.md for instructions")
+                    print(f"\n{Fore.RED}❌ Ferium download failed!")
+                    print(f"{Fore.YELLOW}   • Check that Ferium is properly installed")
+                    print(f"{Fore.YELLOW}   • Use generated/gen-mods.txt for manual installation")
+                    sys.exit(1)  # Exit since we strictly require Ferium
             else:
-                print(f"\n{Fore.BLUE}ℹ To enable automatic downloads:")
-                print(f"{Fore.BLUE}   • Install Ferium: https://github.com/gorilla-devs/ferium")
-                print(f"{Fore.BLUE}   • Then use generated/gen-mods.txt for easy installation")
+                print(f"\n{Fore.RED}❌ Ferium not found!")
+                print(f"{Fore.RED}   • Install Ferium: https://github.com/gorilla-devs/ferium")
+                print(f"{Fore.RED}   • Ferium is required for mod downloads")
+                print(f"\n{Fore.YELLOW}Available installation methods:")
+                print(f"{Fore.YELLOW}   • Arch Linux: yay -S ferium-bin")
+                print(f"{Fore.YELLOW}   • Ubuntu/Debian: Download from GitHub releases")
+                print(f"{Fore.YELLOW}   • Cargo: cargo install --locked ferium")
+                sys.exit(1)  # Exit since we strictly require Ferium
             
             # Show learning summary
             if self.failed_mods:
@@ -803,21 +803,23 @@ class MinecraftModGenerator:
             return False
     
     def download_mods_with_ferium(self, gen_mods_path: Path, mc_version: str, mod_loader: str) -> bool:
-        """Use Ferium to download mods from gen-mods.txt"""
+        """Use Ferium to download mods from gen-mods.txt - STRICT FERIUM ONLY"""
         
         if not self.check_ferium_installed():
-            self.print_warning("Ferium not found! Skipping automatic mod download.")
-            self.print_info("Install Ferium: https://github.com/gorilla-devs/ferium")
+            self.print_error("❌ Ferium not found! Cannot download mods.")
+            self.print_error("Install Ferium: https://github.com/gorilla-devs/ferium")
             return False
         
-        self.print_info("🔽 Downloading mods with Ferium...")
+        self.print_info("🔽 Downloading mods with Ferium (strict mode)...")
         
-        # Create mods download directory (ensure absolute path for Ferium)
-        mods_dir = (gen_mods_path.parent / "gen-mods").resolve()
+        # Create mods download directory in generated/ folder
+        mods_dir = (gen_mods_path.parent / "downloaded-mods").resolve()
         mods_dir.mkdir(exist_ok=True)
         
+        self.print_info(f"📁 Download directory: {mods_dir}")
+        
         # Create temporary profile name
-        temp_profile = f"modsmith-temp-{int(time.time())}"
+        temp_profile = f"modsmith-{int(time.time())}"
         
         try:
             # Create Ferium profile
