@@ -520,6 +520,11 @@ def start_ferium_download(session_id):
         # Start Ferium download in background
         def start_download():
             try:
+                print(f"🚀 Starting Ferium download in background thread...")
+                print(f"📋 Downloading {len(result['valid_mods'])} mods:")
+                for mod in result['valid_mods']:
+                    print(f"  - {mod.name} ({mod.slug})")
+                
                 # Use the generator's Ferium download method
                 success = generator.download_mod_files_with_ferium(
                     result['valid_mods'],
@@ -527,11 +532,16 @@ def start_ferium_download(session_id):
                     result['mod_loader']
                 )
                 
+                print(f"✅ Ferium download completed: Success = {success}")
+                
                 # Update progress with download result
                 generator.progress['ferium_status'] = 'completed' if success else 'failed'
                 generator.progress['ferium_success'] = success
                 
             except Exception as e:
+                print(f"❌ Error in Ferium download thread: {e}")
+                import traceback
+                traceback.print_exc()
                 generator.progress['ferium_status'] = 'error'
                 generator.progress['ferium_error'] = str(e)
         
